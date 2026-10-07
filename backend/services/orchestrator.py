@@ -87,19 +87,24 @@ class AgenticOrchestrator:
 
         # 2. RESEARCHER STAGE (Tavily doc grounding)
         research_docs: List[ResearchDoc] = []
-        if spec.enable_research and plan.research_queries:
+        if spec.enable_research:
+            queries = plan.research_queries if plan.research_queries else [f"{spec.project_type.value} modern best practices 2026"]
             storage_service.update_job_status(job_id, JobStatus.RESEARCHING)
             await storage_service.emit_event(
-                job_id, "researcher", "action", f"Researching latest API docs via Tavily for {len(plan.research_queries)} queries...",
-                {"queries": plan.research_queries}
+                job_id, "researcher", "action", f"Researching latest API docs via Tavily AI Search for {len(queries)} queries...",
+                {"queries": queries}
             )
-            research_docs = await tavily_researcher.search_documentation(plan.research_queries)
+            research_docs = await tavily_researcher.search_documentation(queries)
             storage_service.save_research(job_id, research_docs)
             for doc in research_docs:
                 await storage_service.emit_event(
                     job_id, "researcher", "log", f"Grounded research: {doc.title}",
-                    {"url": doc.url, "summary": doc.summary[:200]}
+                    {"url": doc.url, "summary": doc.summary[:200], "key_apis": doc.key_apis}
                 )
+        else:
+            await storage_service.emit_event(
+                job_id, "researcher", "log", "Tavily research grounding toggled OFF by user. Proceeding directly to code synthesis."
+            )
 
         # 3. CODER STAGE
         storage_service.update_job_status(job_id, JobStatus.CODING)

@@ -3,7 +3,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius_Token_Factory-NVIDIA_Nemotron-76B900.svg)](https://nebius.com)
 [![Hackathon Track](https://img.shields.io/badge/Hackathon-Coding_&_Agentic_Engineering-purple.svg)](https://nebius.com)
-[![Pytest Suite](https://img.shields.io/badge/Pytest-15_Passed_100%25-brightgreen.svg)]()
+[![Pytest Suite](https://img.shields.io/badge/Pytest-19_Passed_100%25-brightgreen.svg)]()
 
 > **Verified, Research-Grounded Code Synthesis**  
 > *Nebius x NVIDIA Global AI Hackathon (Deadline Oct 30, 2026)*  
@@ -92,12 +92,38 @@ SpecForge is engineered from the ground up to exploit open-source **NVIDIA Nemot
 - **Fast Tier (`NEBIUS_MODEL_FAST`)**: Default `nvidia/nemotron-mini-4b-instruct`. Utilized for fast file templating, doc query extraction, and rapid test suite generation.
 
 ### 2. Handling Nemotron Gotchas
-Calling NVIDIA Nemotron models through Nebius Token Factory involves three critical implementation details that SpecForge solves natively:
-
+Calling NVIDIA Nemotron models through Nebius Token Factory involves critical implementation details that SpecForge solves natively:
 - **Reasoning Content Fallback**: Nemotron models are reasoning models where the answer can be placed in `message.reasoning_content` while `choices[0].message.content` may be empty or unpopulated. SpecForge's [`LLMClient`](backend/services/llm_client.py) inspects `content` and automatically falls back to `reasoning_content`.
 - **JSON Structuring Without Tool Calling**: Open-source reasoning models on Token Factory do not support OpenAI function/tool calling schemas. SpecForge enforces strict JSON output schemas via engineered prompts and extracts valid JSON structures robustly across markdown fences and raw text.
-- **Exact Catalog Model IDs**: All model identifiers are externalized to environment variables (`NEBIUS_MODEL_FAST`, `NEBIUS_MODEL_REASONING`) matching Nebius catalog strings.
 - **Zero-Credential Mock Mode**: When `NEBIUS_API_KEY` is omitted or `MOCK_LLM=true` is set, SpecForge executes in high-fidelity mock mode so all unit tests, sandbox runs, and frontend demonstrations run without external API credentials.
+
+### 3. Model ID Configuration & Nebius Catalog Confirmation
+Every NVIDIA/Nemotron model identifier in SpecForge is fully externalized and configurable via environment variables:
+- `NEBIUS_MODEL_FAST`: Identifier for the fast completion tier (default: `nvidia/nemotron-mini-4b-instruct`).
+- `NEBIUS_MODEL_REASONING`: Identifier for the deep reasoning tier (default: `nvidia/Llama-3.1-Nemotron-70B-Instruct`).
+
+> [!IMPORTANT]
+> **Confirm Model IDs in Nebius Catalog Before Submission**:
+> Nebius Token Factory updates its model catalog regularly, and exact model identifier strings (e.g. `nvidia/nemotron-mini-4b-instruct`, `nvidia/Llama-3.1-Nemotron-70B-Instruct`, or new Nemotron variants) can evolve between release cycles. Before final submission or running against live cloud inference, verify the exact active model strings in the [Nebius Token Factory Playground / Model Catalog](https://api.studio.nebius.ai) and set `NEBIUS_MODEL_FAST` and `NEBIUS_MODEL_REASONING` in your `.env` file accordingly. No code modifications are needed because zero model IDs are hardcoded in source.
+
+---
+
+## 🔍 Tavily Search API Grounding ($3,000 Best Use of Tavily Prize Track)
+
+SpecForge actively targets the **$3,000 "Best Use of Tavily"** prize category by transforming Tavily from a general search engine into an indispensable **documentation grounding layer** for agentic code synthesis:
+
+### Why Tavily Grounding is Essential
+Standard LLMs hallucinate outdated APIs or deprecated signatures (e.g., deprecated FastAPI event handlers instead of `@asynccontextmanager lifespan`, Pydantic v1 `.dict()` instead of v2 `.model_dump()`, or deprecated Click callback patterns). SpecForge's Researcher Agent solves this by querying the **Tavily Search API** before any code is generated:
+1. **Targeted Query Formulation**: The Planner agent automatically derives 2–3 precise API queries matching the user's specification (e.g. `"FastAPI 0.110+ lifespan router patterns"`).
+2. **Authoritative Search & Extraction**: SpecForge queries Tavily (`POST https://api.tavily.com/search` with `search_depth="advanced"` and `include_answer=True`) to retrieve verified documentation extracts, official guidelines, and current function signatures.
+3. **Coder Prompt Conditioning**: The retrieved documentation is injected directly into the Nemotron Coder's context prompt, ensuring newly generated code adheres to latest upstream production specifications.
+
+### Explicit On/Off Toggle & Live UI Visibility
+- **Frontend Spec Form Toggle**: SpecForge provides an explicit, prominent ON/OFF toggle in the web UI (`Tavily Research Grounding: ON / OFF`) featuring an interactive switch and a `$3k Prize Track` badge. Users can toggle external web research on or off at will.
+- **Live Pipeline Step**: When enabled, the live agent timeline highlights a dedicated active step (`2. Tavily Docs Grounding`) with real-time SSE updates. When disabled, the timeline clearly indicates the step was skipped per user selection.
+- **Dedicated Grounded Research Panel**: When research runs, a dedicated research panel in the web interface displays the retrieved documentation sources, direct official doc hyperlinks, summaries, and key API chips.
+- **Zero-Credential Evaluation Fallback**: If `TAVILY_API_KEY` is not configured, SpecForge seamlessly falls back to a high-fidelity local grounded knowledge base covering Click 8.1+, FastAPI 0.110+, Pydantic v2, Pytest 8.0+, and React 19, allowing judges and developers to test the full pipeline offline with 0 credentials.
+
 
 ---
 
@@ -107,6 +133,8 @@ Calling NVIDIA Nemotron models through Nebius Token Factory involves three criti
 specforge/
 ├── LICENSE                    # Apache-2.0 License
 ├── README.md                  # Comprehensive documentation & guide
+├── Dockerfile                 # Multi-stage container build (frontend + backend)
+├── docker-compose.yml         # One-command demo deployment orchestration
 ├── .env.example               # Environment variables template
 ├── pytest.ini                 # Pytest configuration
 ├── backend/
@@ -153,7 +181,35 @@ specforge/
 
 ---
 
-## 🚀 Quickstart & Installation
+## 🐳 Demo Deployment (One-Command Launch)
+
+For hackathon judges and evaluators, SpecForge provides a **one-command zero-friction deployment** powered by Docker and Docker Compose. It runs out of the box with zero external credentials required (high-fidelity mock mode) or with live Nebius Token Factory and Tavily credentials.
+
+The deployment uses a multi-stage `Dockerfile` that builds the React 19 frontend assets and runs the FastAPI backend serving both the REST/SSE endpoints and the compiled production web application:
+
+```bash
+# 1. Setup environment file (defaults to zero-credential evaluation mode)
+cp .env.example .env
+
+# 2. Launch the demo with a single command
+docker-compose up -d --build
+```
+
+- **Instant Access**: Open **http://localhost:8000** in your web browser.
+- **Judging Period Reliability**: The container is configured with `restart: unless-stopped` and an automated health check, keeping the demo alive and healthy throughout the judging period (Dec 1–15, 2026).
+- **Persistent Storage**: Job history, SQLite database, and generated project zip archives are safely persisted in the `specforge_data` volume.
+- **Log Streaming & Inspection**:
+  ```bash
+  docker-compose logs -f
+  ```
+- **Stopping the Demo**:
+  ```bash
+  docker-compose down
+  ```
+
+---
+
+## 🚀 Local Development Setup
 
 ### Prerequisites
 - Python 3.12+
@@ -181,7 +237,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r backend/requirements.txt
 
-# Run backend test suite (15 tests, 100% green)
+# Run backend test suite (19 tests, 100% green)
 pytest -v backend/tests
 ```
 

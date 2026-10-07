@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
 
             <div className="badge badge-slate" title={`Fast Tier: ${health.models.fast} | Reasoning Tier: ${health.models.reasoning}`}>
               <Cpu size={12} color="#84cc16" />
-              <span>Nemotron Mini / 70B</span>
+              <span>{health.models.fast.split('/').pop()} / {health.models.reasoning.split('/').pop()}</span>
             </div>
 
             <div className={`badge ${health.tavily_enabled ? 'badge-nebius' : 'badge-slate'}`} title="Tavily Web Search Grounding">

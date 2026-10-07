@@ -165,18 +165,63 @@ export const SpecForm: React.FC<SpecFormProps> = ({
         borderTop: '1px solid var(--border)',
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            <input
-              type="checkbox"
-              checked={enableResearch}
-              onChange={(e) => setEnableResearch(e.target.checked)}
-              disabled={isLoading}
-              style={{ accentColor: '#06b6d4', width: '15px', height: '15px' }}
-            />
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Search size={13} color="#38bdf8" /> Tavily Research Grounding
-            </span>
-          </label>
+          {/* Explicit Tavily Research Toggle Switch */}
+          <button
+            type="button"
+            onClick={() => !isLoading && setEnableResearch(!enableResearch)}
+            disabled={isLoading}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '8px',
+              border: `1px solid ${enableResearch ? 'rgba(6, 182, 212, 0.6)' : 'var(--border)'}`,
+              background: enableResearch ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-card-subtle)',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            title="Toggle Tavily AI Search grounding for live API documentation"
+          >
+            <div style={{
+              width: '32px',
+              height: '18px',
+              borderRadius: '10px',
+              background: enableResearch ? '#06b6d4' : '#334155',
+              position: 'relative',
+              transition: 'background 0.2s ease',
+            }}>
+              <div style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                background: '#ffffff',
+                position: 'absolute',
+                top: '2px',
+                left: enableResearch ? '16px' : '2px',
+                transition: 'left 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Search size={14} color={enableResearch ? '#38bdf8' : 'var(--text-muted)'} />
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: enableResearch ? '#38bdf8' : 'var(--text-secondary)' }}>
+                Tavily Research Grounding: {enableResearch ? 'ON' : 'OFF'}
+              </span>
+              <span style={{
+                fontSize: '0.68rem',
+                background: enableResearch ? 'rgba(6, 182, 212, 0.25)' : 'rgba(100, 116, 139, 0.15)',
+                color: enableResearch ? '#38bdf8' : '#94a3b8',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 600,
+              }}>
+                Best Use of Tavily ($3k Prize)
+              </span>
+            </div>
+          </button>
+
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
             <input

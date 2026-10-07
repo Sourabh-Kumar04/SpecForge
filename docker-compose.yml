@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: specforge-demo
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - STORAGE_DIR=/app/data
+    restart: unless-stopped
+    volumes:
+      - specforge_data:/app/data
+
+volumes:
+  specforge_data:

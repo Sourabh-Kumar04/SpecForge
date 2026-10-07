@@ -42,6 +42,10 @@ dist_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if dist_dir.exists():
     app.mount("/assets", StaticFiles(directory=dist_dir / "assets"), name="assets")
 
+    @app.get("/")
+    def serve_root():
+        return FileResponse(dist_dir / "index.html")
+
     @app.get("/{full_path:path}")
     def serve_frontend(full_path: str):
         file_path = dist_dir / full_path

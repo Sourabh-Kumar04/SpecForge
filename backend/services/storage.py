@@ -49,9 +49,16 @@ class StorageService:
                     plan_json TEXT,
                     research_json TEXT,
                     error TEXT,
-                    workspace_dir TEXT
+                    workspace_dir TEXT,
+                    spec_json TEXT
                 )
             """)
+            # Schema migration for existing sqlite db
+            cursor = conn.execute("PRAGMA table_info(jobs)")
+            cols = [col[1] for col in cursor.fetchall()]
+            if "spec_json" not in cols:
+                conn.execute("ALTER TABLE jobs ADD COLUMN spec_json TEXT")
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS files (
                     job_id TEXT NOT NULL,
@@ -101,15 +108,16 @@ class StorageService:
         with self._get_connection() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (job_id, prompt, project_type, status, created_at, updated_at, workspace_dir)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (job_id, prompt, project_type, status, created_at, updated_at, workspace_dir, spec_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_id) DO UPDATE SET
                     prompt = excluded.prompt,
                     project_type = excluded.project_type,
                     status = excluded.status,
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at,
-                    workspace_dir = excluded.workspace_dir
+                    workspace_dir = excluded.workspace_dir,
+                    spec_json = excluded.spec_json
                 """,
                 (
                     job_id,
@@ -119,6 +127,7 @@ class StorageService:
                     now,
                     now,
                     str(workspace),
+                    spec.model_dump_json(),
                 ),
             )
             conn.commit()
@@ -293,10 +302,13 @@ class StorageService:
                 for e in evt_rows
             ]
 
-            spec = SpecInput(
-                prompt=row["prompt"],
-                project_type=row["project_type"],
-            )
+            if "spec_json" in row.keys() and row["spec_json"]:
+                spec = SpecInput.model_validate_json(row["spec_json"])
+            else:
+                spec = SpecInput(
+                    prompt=row["prompt"],
+                    project_type=row["project_type"],
+                )
 
             zip_path = self.zips_dir / f"{job_id}.zip"
             download_url = f"/api/jobs/{job_id}/download" if zip_path.exists() else None

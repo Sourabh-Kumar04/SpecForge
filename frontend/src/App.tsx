@@ -191,8 +191,15 @@ export const App: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-nvidia">Reasoning Tier: Nemotron 3 Ultra</span>
-            <span className="badge badge-nebius">Fast Tier: Nemotron Nano</span>
+            <span className="badge badge-nvidia">
+              Reasoning Tier: {health?.models?.reasoning ? health.models.reasoning : 'nvidia/Llama-3.1-Nemotron-70B-Instruct'}
+            </span>
+            <span className="badge badge-nebius">
+              Fast Tier: {health?.models?.fast ? health.models.fast : 'nvidia/nemotron-mini-4b-instruct'}
+            </span>
+            <span className="badge badge-nebius" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#38bdf8', borderColor: '#06b6d4' }}>
+              Tavily Grounded ($3,000 Prize Track)
+            </span>
           </div>
         </div>
 
@@ -287,6 +294,8 @@ export const App: React.FC = () => {
             status={currentJob.status}
             events={currentJob.events}
             latestThought={latestThought}
+            enableResearch={currentJob.spec?.enable_research ?? enableResearch}
+            researchNotes={currentJob.research_notes}
           />
         )}
 

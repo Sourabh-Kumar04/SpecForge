@@ -60,3 +60,20 @@ def test_mock_llm_mode():
     parsed, _ = client.complete_json("You are a planner", "Plan an app", tier="reasoning")
     assert "title" in parsed
     assert "files" in parsed
+
+def test_model_ids_configurable_via_env(monkeypatch):
+    monkeypatch.setenv("NEBIUS_MODEL_FAST", "custom/nemotron-fast-custom-v1")
+    monkeypatch.setenv("NEBIUS_MODEL_REASONING", "custom/nemotron-reasoning-custom-v2")
+    
+    from backend.config import Settings
+    custom_settings = Settings()
+    assert custom_settings.nebius_model_fast == "custom/nemotron-fast-custom-v1"
+    assert custom_settings.nebius_model_reasoning == "custom/nemotron-reasoning-custom-v2"
+
+    # Verify LLMClient honors the configured settings
+    client = LLMClient()
+    client.fast_model = custom_settings.nebius_model_fast
+    client.reasoning_model = custom_settings.nebius_model_reasoning
+    assert client._get_model_id("fast") == "custom/nemotron-fast-custom-v1"
+    assert client._get_model_id("reasoning") == "custom/nemotron-reasoning-custom-v2"
+

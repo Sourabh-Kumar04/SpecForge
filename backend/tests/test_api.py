@@ -43,3 +43,38 @@ def test_api_jobs_list():
     resp = client.get("/api/jobs")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+
+def test_tavily_research_toggle_persisted():
+    # Toggle OFF
+    payload_off = {
+        "prompt": "Test CLI application with Tavily research disabled",
+        "project_type": "python_cli",
+        "enable_research": False,
+        "require_plan_approval": False
+    }
+    create_resp = client.post("/api/jobs", json=payload_off)
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["job_id"]
+    get_resp = client.get(f"/api/jobs/{job_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["spec"]["enable_research"] is False
+
+    # Toggle ON
+    payload_on = {
+        "prompt": "Test CLI application with Tavily research enabled",
+        "project_type": "python_cli",
+        "enable_research": True,
+        "require_plan_approval": False
+    }
+    create_resp_on = client.post("/api/jobs", json=payload_on)
+    assert create_resp_on.status_code == 201
+    job_id_on = create_resp_on.json()["job_id"]
+    get_resp_on = client.get(f"/api/jobs/{job_id_on}")
+    assert get_resp_on.status_code == 200
+    assert get_resp_on.json()["spec"]["enable_research"] is True
+
+def test_serve_frontend_root():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "<!doctype html>" in resp.text.lower() or "<html" in resp.text.lower()
+
