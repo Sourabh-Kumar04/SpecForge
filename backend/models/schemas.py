@@ -1,0 +1,85 @@
+from enum import Enum
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+
+class ProjectType(str, Enum):
+    PYTHON_CLI = "python_cli"
+    FASTAPI_SERVICE = "fastapi_service"
+    REACT_COMPONENT = "react_component"
+
+class JobStatus(str, Enum):
+    QUEUED = "queued"
+    PLANNING = "planning"
+    AWAITING_PLAN_APPROVAL = "awaiting_plan_approval"
+    RESEARCHING = "researching"
+    CODING = "coding"
+    TESTING = "testing"
+    FIXING = "fixing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class SpecInput(BaseModel):
+    prompt: str = Field(..., description="Plain-English project requirement or specification")
+    project_type: ProjectType = Field(default=ProjectType.PYTHON_CLI, description="Target architecture template")
+    enable_research: bool = Field(default=True, description="Enable Tavily doc grounding")
+    require_plan_approval: bool = Field(default=False, description="Pause after planning for human review/edit")
+    max_fix_iterations: int = Field(default=5, ge=1, le=10, description="Max fixer loop attempts upon failing tests")
+
+class PlannedFile(BaseModel):
+    path: str
+    purpose: str
+    is_test: bool = False
+
+class Plan(BaseModel):
+    title: str
+    architecture_summary: str
+    tech_stack: List[str] = []
+    files: List[PlannedFile] = []
+    test_strategy: str = ""
+    research_queries: List[str] = []
+
+class ResearchDoc(BaseModel):
+    query: str
+    url: Optional[str] = None
+    title: str
+    summary: str
+    key_apis: List[str] = []
+
+class GeneratedFile(BaseModel):
+    path: str
+    content: str
+    language: str
+
+class TestResult(BaseModel):
+    passed: bool
+    total_tests: int = 0
+    passed_tests: int = 0
+    failed_tests: int = 0
+    output: str = ""
+    iteration: int = 1
+    duration_seconds: float = 0.0
+    runner: str = "subprocess"
+
+class AgentEvent(BaseModel):
+    id: str
+    timestamp: str
+    stage: str
+    event_type: str  # thought, action, log, test_run, file_written, status, error
+    message: str
+    data: Optional[Dict[str, Any]] = None
+
+class JobDetail(BaseModel):
+    job_id: str
+    spec: SpecInput
+    status: JobStatus
+    created_at: str
+    updated_at: str
+    plan: Optional[Plan] = None
+    research_notes: List[ResearchDoc] = []
+    files: List[GeneratedFile] = []
+    test_history: List[TestResult] = []
+    latest_test: Optional[TestResult] = None
+    error: Optional[str] = None
+    events: List[AgentEvent] = []
+    download_url: Optional[str] = None
+    workspace_dir: Optional[str] = None
