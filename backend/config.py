@@ -6,8 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     nebius_base_url: str = "https://api.studio.nebius.ai/v1"
     nebius_api_key: Optional[str] = None
-    nebius_model_fast: str = "nvidia/nemotron-mini-4b-instruct"
-    nebius_model_reasoning: str = "nvidia/Llama-3.1-Nemotron-70B-Instruct"
+    nebius_model_fast: str = "nvidia/nemotron-3-super-120b-a12b"
+    nebius_model_reasoning: str = "nvidia/Nemotron-3-Ultra-550b-a55b"
     tavily_api_key: Optional[str] = None
     mock_llm: bool = False
     max_fix_iterations: int = 5

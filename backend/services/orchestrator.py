@@ -24,6 +24,7 @@ logger = logging.getLogger("specforge.orchestrator")
 
 SYSTEM_PLANNER_PROMPT = """You are the Lead Software Architect in SpecForge, powered by NVIDIA Nemotron reasoning models.
 Your role: Given a project specification and target framework, decompose it into a clean, modern, testable architecture.
+Keep internal reasoning concise (under 100 words). For small or minimal specs, design a focused architecture with 2 to 4 files maximum (e.g. core logic, entrypoint, test suite).
 Always produce a JSON object with:
 - "title": string
 - "architecture_summary": string
@@ -35,18 +36,24 @@ Always produce a JSON object with:
 
 SYSTEM_CODER_PROMPT = """You are the Principal Engineer in SpecForge, powered by NVIDIA Nemotron.
 Your role: Write production-ready, clean, well-typed code for the specified files, strictly following modern best practices and the architectural plan and research notes.
+Keep internal reasoning concise (under 80 words) and output the full JSON object immediately.
+CODE FORMATTING RULE: In Python code, use single quotes ''' for docstrings or # comments, NEVER use triple double-quotes \"\"\". This ensures valid JSON escaping.
 Return a JSON object containing:
 - "files": list of objects {"path": string, "content": string, "language": string}
 """
 
 SYSTEM_TESTER_PROMPT = """You are the Senior QA Automation Engineer in SpecForge.
 Your role: Generate comprehensive pytest test suites that rigorously test edge cases, error handling, and normal operation of the code written.
+Keep internal reasoning concise (under 80 words) and output the full JSON object immediately.
+CODE FORMATTING RULE: In Python code, use single quotes ''' for docstrings or # comments, NEVER use triple double-quotes \"\"\". This ensures valid JSON escaping.
 Return a JSON object containing:
 - "test_files": list of objects {"path": string, "content": string, "language": "python"}
 """
 
 SYSTEM_FIXER_PROMPT = """You are the Autonomous Debugging Agent in SpecForge, using NVIDIA Nemotron reasoning.
 Your role: Analyze test failure logs, tracebacks, and assertion mismatches, diagnose the root cause, and produce exact file corrections to achieve 100% test pass rate.
+Keep internal reasoning concise (under 100 words) and output the full JSON object immediately.
+CODE FORMATTING RULE: In Python code, use single quotes ''' for docstrings or # comments, NEVER use triple double-quotes \"\"\". This ensures valid JSON escaping.
 Return a JSON object containing:
 - "diagnosis": string explanation of root cause
 - "changes": list of objects {"path": string, "explanation": string, "content": string}
@@ -238,15 +245,17 @@ class AgenticOrchestrator:
         data, reasoning = llm_client.complete_json(
             system_prompt=SYSTEM_CODER_PROMPT,
             user_prompt=user_prompt,
-            tier="reasoning"
+            tier="fast"
         )
         files = []
-        for f in data.get("files", []):
-            files.append(GeneratedFile(
-                path=f["path"],
-                content=f["content"],
-                language=f.get("language", "python")
-            ))
+        for f in (data.get("files", []) if isinstance(data, dict) else []):
+            if isinstance(f, dict) and "path" in f:
+                content = f.get("content") or f.get("code") or f.get("source") or ""
+                files.append(GeneratedFile(
+                    path=f["path"],
+                    content=content,
+                    language=f.get("language", "python")
+                ))
         return files
 
     async def _run_tester(
@@ -272,12 +281,14 @@ class AgenticOrchestrator:
             tier="fast"
         )
         tests = []
-        for tf in data.get("test_files", []):
-            tests.append(GeneratedFile(
-                path=tf["path"],
-                content=tf["content"],
-                language="python"
-            ))
+        for tf in (data.get("test_files", []) if isinstance(data, dict) else []):
+            if isinstance(tf, dict) and "path" in tf:
+                content = tf.get("content") or tf.get("code") or tf.get("source") or ""
+                tests.append(GeneratedFile(
+                    path=tf["path"],
+                    content=content,
+                    language="python"
+                ))
         return tests
 
     async def _run_fixer(
@@ -310,13 +321,14 @@ class AgenticOrchestrator:
             tier="reasoning"
         )
 
-        for ch in data.get("changes", []):
-            path = ch["path"]
-            content = ch["content"]
-            storage_service.save_file(job_id, GeneratedFile(path=path, content=content, language="python"))
-            await storage_service.emit_event(
-                job_id, "fixer", "action", f"Patched {path}: {ch.get('explanation', 'applied fixes')}"
-            )
+        for ch in (data.get("changes", []) if isinstance(data, dict) else []):
+            if isinstance(ch, dict) and "path" in ch:
+                path = ch["path"]
+                content = ch.get("content") or ch.get("code") or ch.get("source") or ""
+                storage_service.save_file(job_id, GeneratedFile(path=path, content=content, language="python"))
+                await storage_service.emit_event(
+                    job_id, "fixer", "action", f"Patched {path}: {ch.get('explanation', 'applied fixes')}"
+                )
 
     def _generate_readme(
         self,

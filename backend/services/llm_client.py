@@ -14,41 +14,67 @@ def extract_json_from_text(text: str) -> Any:
         raise ValueError("Cannot extract JSON from empty text")
     
     clean_text = text.strip()
+
+    def _repair_triple_quotes(s: str) -> str:
+        pattern = r'(\"(?:content|code|body|source)\"\s*:\s*)\"\"\"([\s\S]*?)\"\"\"(?=\s*[\r\n]*\s*[},\]])'
+        def repl(m):
+            prefix = m.group(1)
+            inner = m.group(2)
+            try:
+                unescaped = inner.encode('utf-8').decode('unicode_escape')
+            except Exception:
+                unescaped = inner
+            return prefix + json.dumps(unescaped)
+        return re.sub(pattern, repl, s)
+
+    def _parse(s: str) -> Any:
+        try:
+            return json.loads(s)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        try:
+            return json.loads(s, strict=False)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        try:
+            repaired = _repair_triple_quotes(s)
+            return json.loads(repaired, strict=False)
+        except Exception:
+            return None
+
     # Check for markdown code fences
     fence_pattern = r"```(?:json)?\s*([\s\S]*?)\s*```"
     matches = re.findall(fence_pattern, clean_text, re.DOTALL)
     if matches:
         for match in reversed(matches):
-            try:
-                return json.loads(match.strip())
-            except json.JSONDecodeError:
-                continue
+            res = _parse(match.strip())
+            if res is not None:
+                return res
 
     # Try raw string
-    try:
-        return json.loads(clean_text)
-    except json.JSONDecodeError:
-        pass
+    res = _parse(clean_text)
+    if res is not None:
+        return res
 
     # Find outermost { ... }
     first_brace = clean_text.find("{")
     last_brace = clean_text.rfind("}")
     if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
         snippet = clean_text[first_brace:last_brace + 1]
-        try:
-            return json.loads(snippet)
-        except json.JSONDecodeError:
-            pass
+        res = _parse(snippet)
+        if res is not None:
+            return res
 
     # Find outermost [ ... ]
     first_bracket = clean_text.find("[")
     last_bracket = clean_text.rfind("]")
     if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
         snippet = clean_text[first_bracket:last_bracket + 1]
-        try:
-            return json.loads(snippet)
-        except json.JSONDecodeError:
-            pass
+        res = _parse(snippet)
+        if res is not None:
+            return res
 
     raise ValueError(f"Could not parse valid JSON from text: {text[:200]}...")
 
@@ -68,6 +94,10 @@ class LLMClient:
         self.fast_model = settings.nebius_model_fast
         self.reasoning_model = settings.nebius_model_reasoning
         self.client: Optional[OpenAI] = None
+        self.total_prompt_tokens: int = 0
+        self.total_completion_tokens: int = 0
+        self.total_tokens: int = 0
+        self.last_call_usage: Dict[str, int] = {}
 
         if not self.is_mock and settings.nebius_api_key:
             self.client = OpenAI(
@@ -89,7 +119,8 @@ class LLMClient:
         user_prompt: str,
         tier: str = "reasoning",
         temperature: float = 0.2,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
+        reasoning_effort: Optional[str] = "low",
     ) -> Tuple[str, Optional[str]]:
         """
         Executes a completion request.
@@ -101,19 +132,44 @@ class LLMClient:
 
         model_id = self._get_model_id(tier)
         try:
-            response = self.client.chat.completions.create(
-                model=model_id,
-                messages=[
+            kwargs: Dict[str, Any] = {
+                "model": model_id,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if reasoning_effort:
+                kwargs["reasoning_effort"] = reasoning_effort
+
+            response = self.client.chat.completions.create(**kwargs)
             
+            # Record token usage
+            usage = getattr(response, "usage", None)
+            if usage:
+                p_tokens = getattr(usage, "prompt_tokens", 0) or 0
+                c_tokens = getattr(usage, "completion_tokens", 0) or 0
+                t_tokens = getattr(usage, "total_tokens", 0) or (p_tokens + c_tokens)
+                self.total_prompt_tokens += p_tokens
+                self.total_completion_tokens += c_tokens
+                self.total_tokens += t_tokens
+                self.last_call_usage = {
+                    "prompt_tokens": p_tokens,
+                    "completion_tokens": c_tokens,
+                    "total_tokens": t_tokens
+                }
+
             message = response.choices[0].message
             content = getattr(message, "content", None) or ""
-            reasoning_content = getattr(message, "reasoning_content", None)
+            model_extra = getattr(message, "model_extra", None) or {}
+            reasoning_content = (
+                getattr(message, "reasoning_content", None)
+                or getattr(message, "reasoning", None)
+                or model_extra.get("reasoning_content")
+                or model_extra.get("reasoning")
+            )
 
             # Gotcha handling:
             # If content is empty or only whitespace, fall back to reasoning_content
@@ -140,8 +196,9 @@ class LLMClient:
         """
         system_prompt_with_json = (
             f"{system_prompt}\n\n"
-            "CRITICAL REQUIREMENT: Output MUST be strictly valid JSON without explanation, "
-            "wrapped in ```json ... ``` code fence or as a raw JSON string."
+            "CRITICAL REQUIREMENT: Output MUST be strictly valid, well-formed JSON without markdown explanations outside the JSON. "
+            "Wrap output in ```json ... ``` code fence or return as a raw JSON string. "
+            "All string values (including multiline code) must be properly JSON-escaped strings (use \\n for newlines, \\\" for double quotes)."
         )
         content, reasoning = self.complete(system_prompt_with_json, user_prompt, tier=tier)
         parsed = extract_json_from_text(content)
@@ -151,33 +208,8 @@ class LLMClient:
         """Mock generator that produces context-aware responses matching schema expectations."""
         prompt_lower = (system_prompt + " " + user_prompt).lower()
 
-        # 1. PLANNER request
-        if "plan" in prompt_lower or "architect" in prompt_lower:
-            mock_plan = {
-                "title": "SpecForge Verified Microservice",
-                "architecture_summary": "Modular, test-driven application architecture optimized for high reliability and clean separation of concerns.",
-                "tech_stack": ["Python 3.12", "FastAPI", "Pydantic v2", "Pytest", "Uvicorn"],
-                "files": [
-                    {"path": "app/core/config.py", "purpose": "App settings & environment validation", "is_test": False},
-                    {"path": "app/services/calculator.py", "purpose": "Core business domain logic", "is_test": False},
-                    {"path": "app/api/endpoints.py", "purpose": "REST API routes and request validators", "is_test": False},
-                    {"path": "app/main.py", "purpose": "FastAPI application factory and middleware", "is_test": False},
-                    {"path": "tests/test_calculator.py", "purpose": "Unit tests for core logic", "is_test": True},
-                    {"path": "tests/test_api.py", "purpose": "Integration tests for HTTP endpoints", "is_test": True},
-                    {"path": "pyproject.toml", "purpose": "Project configuration and dependencies", "is_test": False}
-                ],
-                "test_strategy": "100% unit test coverage on core math/business logic plus API endpoint HTTP status verification using FastAPI TestClient.",
-                "research_queries": [
-                    "FastAPI 0.110 best practices router dependency injection",
-                    "Pydantic v2 BaseSettings configuration patterns",
-                    "Pytest fixtures for ASGI test client"
-                ]
-            }
-            reasoning = "Analyzing spec requirements. Decomposing into modular components: config, business service, API routes, and test suite. Planning pytest test strategy."
-            return json.dumps(mock_plan, indent=2), reasoning
-
-        # 2. FIXER request
-        if "fix" in prompt_lower or "repair" in prompt_lower or "traceback" in prompt_lower:
+        # 1. FIXER request
+        if "fix" in prompt_lower or "repair" in prompt_lower or "traceback" in prompt_lower or "diagnosis" in prompt_lower:
             mock_fix = {
                 "diagnosis": "Identified edge case in division or boundary validation causing assertion failure.",
                 "changes": [
@@ -223,7 +255,87 @@ class CalculatorService:
             reasoning = "Examined failing test traceback. Root cause was unhandled zero division in calculator service. Patched divide method with explicit ValueError check."
             return json.dumps(mock_fix, indent=2), reasoning
 
-        # 3. Default JSON / fallback
+        # 2. TESTER request
+        if "test_files" in prompt_lower or "qa automation engineer" in prompt_lower or "generate complete test suites" in prompt_lower:
+            mock_tests = {
+                "test_files": [
+                    {
+                        "path": "tests/test_calculator.py",
+                        "content": '''"""Unit tests for calculator."""
+from app.services.calculator import CalculatorService
+
+def test_calculator_operations():
+    assert CalculatorService.add(2, 3) == 5
+    assert CalculatorService.subtract(5, 2) == 3
+    assert CalculatorService.multiply(3, 4) == 12
+    assert CalculatorService.divide(10, 2) == 5
+''',
+                        "language": "python"
+                    }
+                ]
+            }
+            return json.dumps(mock_tests, indent=2), "Mock test suite generation complete."
+
+        # 3. CODER request
+        if "principal engineer" in prompt_lower or "generate implementation for files" in prompt_lower:
+            mock_code = {
+                "files": [
+                    {
+                        "path": "app/services/calculator.py",
+                        "content": '''"""Calculator business logic service."""
+from typing import List
+
+class CalculatorService:
+    @staticmethod
+    def add(a: float, b: float) -> float:
+        return a + b
+
+    @staticmethod
+    def subtract(a: float, b: float) -> float:
+        return a - b
+
+    @staticmethod
+    def multiply(a: float, b: float) -> float:
+        return a * b
+
+    @staticmethod
+    def divide(a: float, b: float) -> float:
+        if b == 0:
+            raise ValueError("Division by zero is not permitted")
+        return a / b
+''',
+                        "language": "python"
+                    }
+                ]
+            }
+            return json.dumps(mock_code, indent=2), "Mock coder implementation complete."
+
+        # 4. PLANNER request
+        if "plan" in prompt_lower or "architect" in prompt_lower:
+            mock_plan = {
+                "title": "SpecForge Verified Microservice",
+                "architecture_summary": "Modular, test-driven application architecture optimized for high reliability and clean separation of concerns.",
+                "tech_stack": ["Python 3.12", "FastAPI", "Pydantic v2", "Pytest", "Uvicorn"],
+                "files": [
+                    {"path": "app/core/config.py", "purpose": "App settings & environment validation", "is_test": False},
+                    {"path": "app/services/calculator.py", "purpose": "Core business domain logic", "is_test": False},
+                    {"path": "app/api/endpoints.py", "purpose": "REST API routes and request validators", "is_test": False},
+                    {"path": "app/main.py", "purpose": "FastAPI application factory and middleware", "is_test": False},
+                    {"path": "tests/test_calculator.py", "purpose": "Unit tests for core logic", "is_test": True},
+                    {"path": "tests/test_api.py", "purpose": "Integration tests for HTTP endpoints", "is_test": True},
+                    {"path": "pyproject.toml", "purpose": "Project configuration and dependencies", "is_test": False}
+                ],
+                "test_strategy": "100% unit test coverage on core math/business logic plus API endpoint HTTP status verification using FastAPI TestClient.",
+                "research_queries": [
+                    "FastAPI 0.110 best practices router dependency injection",
+                    "Pydantic v2 BaseSettings configuration patterns",
+                    "Pytest fixtures for ASGI test client"
+                ]
+            }
+            reasoning = "Analyzing spec requirements. Decomposing into modular components: config, business service, API routes, and test suite. Planning pytest test strategy."
+            return json.dumps(mock_plan, indent=2), reasoning
+
+        # 5. Default JSON / fallback
         default_json = {
             "status": "success",
             "message": "Generated via SpecForge Nemotron fallback pipeline"

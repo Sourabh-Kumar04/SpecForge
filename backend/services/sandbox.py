@@ -70,7 +70,7 @@ class SandboxRunner:
         """Run tests via local isolated subprocess with timeout."""
         cmd = []
         env = os.environ.copy()
-        env["PYTHONPATH"] = f"{workspace_dir.resolve()}:{env.get('PYTHONPATH', '')}"
+        env["PYTHONPATH"] = f"{workspace_dir.resolve()}:{workspace_dir.resolve() / 'src'}:{env.get('PYTHONPATH', '')}"
 
         # Find python executable to run pytest
         python_bin = sys.executable
@@ -78,10 +78,14 @@ class SandboxRunner:
         if venv_pytest.exists():
             pytest_cmd = [str(venv_pytest)]
         else:
-            pytest_cmd = [python_bin, "-m", "pytest"]
+            system_pytest = shutil.which("pytest")
+            if system_pytest:
+                pytest_cmd = [system_pytest]
+            else:
+                pytest_cmd = [python_bin, "-m", "pytest"]
 
         # Ensure pytest config overrides parent configs and isolates pythonpath to workspace
-        override_opts = ["-o", f"pythonpath={workspace_dir.resolve()}", "--override-ini=rootdir=."]
+        override_opts = ["-o", f"pythonpath={workspace_dir.resolve()} {workspace_dir.resolve() / 'src'}", "--override-ini=rootdir=."]
         if project_type in [ProjectType.PYTHON_CLI, ProjectType.FASTAPI_SERVICE]:
             cmd = pytest_cmd + override_opts + ["-v", "--tb=short", "tests"]
         elif project_type == ProjectType.REACT_COMPONENT:
