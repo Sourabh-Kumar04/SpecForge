@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from backend.config import settings
 from backend.routes import api_router
 
@@ -52,6 +52,15 @@ if dist_dir.exists():
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
         return FileResponse(dist_dir / "index.html")
+else:
+    @app.get("/")
+    def serve_root_fallback():
+        return HTMLResponse(
+            "<!doctype html><html><head><title>SpecForge</title></head>"
+            "<body><h1>SpecForge API Running</h1>"
+            "<p>Frontend assets not built. Run <code>npm run build</code> in frontend directory.</p>"
+            "</body></html>"
+        )
 
 if __name__ == "__main__":
     import uvicorn
