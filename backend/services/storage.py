@@ -342,8 +342,12 @@ class StorageService:
         ws = self.get_job_workspace(job_id)
         zip_path = self.zips_dir / f"{job_id}.zip"
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(ws):
+            for root, dirs, files in os.walk(ws):
+                # Prune cache directories
+                dirs[:] = [d for d in dirs if d not in ("__pycache__", ".pytest_cache", ".git", "node_modules")]
                 for file in files:
+                    if file.endswith((".pyc", ".pyo")):
+                        continue
                     file_path = Path(root) / file
                     arcname = file_path.relative_to(ws)
                     zipf.write(file_path, arcname)
