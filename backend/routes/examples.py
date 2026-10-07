@@ -15,6 +15,14 @@ class ExampleSpec(BaseModel):
 
 PRESET_EXAMPLES: List[ExampleSpec] = [
     ExampleSpec(
+        id="fastmcp-2026-server",
+        title="FastMCP 4.0 Protocol Server (2026)",
+        description="Model Context Protocol server utilizing the July 2026 FastMCP 4.0 stateless spec with tool schemas and in-memory client test suite.",
+        project_type=ProjectType.PYTHON_CLI,
+        prompt="Build a production Model Context Protocol (MCP) CLI tool and server using FastMCP 4.0 (July 2026 specification). The service exposes data analysis and math tools via @mcp.tool, supports stateless protocol negotiation, and includes a comprehensive pytest test suite asserting tool registration, execution, and error boundary handling.",
+        tags=["FastMCP 4.0", "MCP 2026", "Tavily Grounded", "Python CLI", "Pytest"]
+    ),
+    ExampleSpec(
         id="fastapi-task-api",
         title="FastAPI Lifespan Microservice",
         description="Production REST API with Pydantic v2 schemas, in-memory repository, health check, and ASGI test suite.",

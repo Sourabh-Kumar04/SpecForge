@@ -34,11 +34,11 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
   return (
     <div style={{
       background: 'var(--bg-card)',
-      border: `1px solid ${isGreen ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+      border: `2px solid ${isGreen ? '#22c55e' : 'rgba(239, 68, 68, 0.5)'}`,
       borderRadius: '14px',
       padding: '1.25rem',
       marginBottom: '1.5rem',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+      boxShadow: isGreen ? '0 0 28px rgba(34, 197, 94, 0.22), 0 8px 24px rgba(0, 0, 0, 0.25)' : '0 8px 24px rgba(0, 0, 0, 0.25)',
     }}>
       {/* Header with Verification Stamp */}
       <div style={{
@@ -51,24 +51,39 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '8px',
-            background: isGreen ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            width: '38px',
+            height: '38px',
+            borderRadius: '10px',
+            background: isGreen ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+            border: `1px solid ${isGreen ? '#22c55e' : '#ef4444'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            {isGreen ? <CheckCircle2 size={20} color="#4ade80" /> : <XCircle size={20} color="#f87171" />}
+            {isGreen ? <CheckCircle2 size={22} color="#4ade80" /> : <XCircle size={22} color="#f87171" />}
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
                 Sandbox Test Verification Report
               </h3>
-              <span className={`badge ${isGreen ? 'badge-green' : 'badge-red'}`}>
-                {isGreen ? '100% VERIFIED GREEN' : 'TEST FAILURES DETECTED'}
-              </span>
+              {isGreen ? (
+                <span className="badge badge-green" style={{
+                  fontSize: '0.85rem',
+                  padding: '3px 10px',
+                  fontWeight: 800,
+                  background: 'rgba(34, 197, 94, 0.25)',
+                  border: '1px solid #4ade80',
+                  color: '#86efac',
+                  letterSpacing: '0.02em',
+                }}>
+                  VERIFIED ✓ ({displayedTest.passed_tests}/{displayedTest.total_tests} tests passed, {testHistory.length || 1} iteration{(testHistory.length || 1) === 1 ? '' : 's'})
+                </span>
+              ) : (
+                <span className="badge badge-red" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                  TEST FAILURES DETECTED ({displayedTest.failed_tests} failed)
+                </span>
+              )}
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
               Execution verified in isolated sandbox with strict assertion boundaries

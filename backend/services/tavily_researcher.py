@@ -8,6 +8,12 @@ logger = logging.getLogger("specforge.researcher")
 
 # Grounded knowledge base for zero-credential / mock research mode
 GROUNDED_KNOWLEDGE = {
+    "fastmcp": {
+        "title": "FastMCP 4.0 (July 2026 Spec) - Model Context Protocol SDK",
+        "url": "https://gofastmcp.com",
+        "summary": "FastMCP 4.0 implements the July 28, 2026 MCP specification with stateless protocol support, @mcp.tool decorators, FastMCP.Client in-memory testing, and Depends injection. Obsoletes legacy stdio boilerplate.",
+        "key_apis": ["from fastmcp import FastMCP, Context", "@mcp.tool()", "client = FastMCP.Client(server)", "mcp.run()"]
+    },
     "click": {
         "title": "Click 8.1+ Modern CLI Interface Patterns",
         "url": "https://click.palletsprojects.com/en/latest/",

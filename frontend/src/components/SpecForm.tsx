@@ -1,6 +1,6 @@
 import React from 'react';
 import { ProjectType } from '../types';
-import { Terminal, Server, Layout, Search, Play, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Terminal, Server, Layout, Search, Play, CheckCircle, ShieldAlert, Sparkles } from 'lucide-react';
 
 interface SpecFormProps {
   prompt: string;
@@ -15,6 +15,7 @@ interface SpecFormProps {
   setMaxFixIterations: (v: number) => void;
   onSubmit: () => void;
   isLoading: boolean;
+  onLoadSample?: () => void;
 }
 
 export const SpecForm: React.FC<SpecFormProps> = ({
@@ -30,6 +31,7 @@ export const SpecForm: React.FC<SpecFormProps> = ({
   setMaxFixIterations,
   onSubmit,
   isLoading,
+  onLoadSample,
 }) => {
   const architectures: { type: ProjectType; title: string; desc: string; icon: any; color: string }[] = [
     {
@@ -122,15 +124,47 @@ export const SpecForm: React.FC<SpecFormProps> = ({
       </div>
 
       <div style={{ marginBottom: '1.25rem' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          color: 'var(--text-primary)',
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: '0.5rem',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
         }}>
-          2. Plain-English Application Specification
-        </label>
+          <label style={{
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+          }}>
+            2. Plain-English Application Specification
+          </label>
+          {onLoadSample && (
+            <button
+              type="button"
+              onClick={onLoadSample}
+              disabled={isLoading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.3rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(132, 204, 22, 0.45)',
+                background: 'rgba(132, 204, 22, 0.12)',
+                color: '#a3e635',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              title="Load compelling 2026 FastMCP sample spec demonstrating Tavily grounding"
+            >
+              <Sparkles size={14} color="#a3e635" />
+              <span>Try a sample spec →</span>
+            </button>
+          )}
+        </div>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

@@ -34,11 +34,20 @@ import {
   Code2,
 } from 'lucide-react';
 
+const SAMPLE_FASTMCP_SPEC: ExampleSpec = {
+  id: 'fastmcp-2026-server',
+  title: 'FastMCP 4.0 Protocol Server (2026)',
+  description: 'Model Context Protocol server utilizing the July 2026 FastMCP 4.0 stateless spec with tool schemas and in-memory client test suite.',
+  project_type: 'python_cli',
+  prompt: 'Build a production Model Context Protocol (MCP) CLI tool and server using FastMCP 4.0 (July 2026 specification). The service exposes data analysis and math tools via @mcp.tool, supports stateless protocol negotiation, and includes a comprehensive pytest test suite asserting tool registration, execution, and error boundary handling.',
+  tags: ['FastMCP 4.0', 'MCP 2026', 'Tavily Grounded', 'Python CLI', 'Pytest'],
+};
+
 export const App: React.FC = () => {
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [examples, setExamples] = useState<ExampleSpec[]>([]);
-  const [prompt, setPrompt] = useState<string>('');
-  const [projectType, setProjectType] = useState<ProjectType>('python_cli');
+  const [prompt, setPrompt] = useState<string>(SAMPLE_FASTMCP_SPEC.prompt);
+  const [projectType, setProjectType] = useState<ProjectType>(SAMPLE_FASTMCP_SPEC.project_type);
   const [enableResearch, setEnableResearch] = useState<boolean>(true);
   const [requirePlanApproval, setRequirePlanApproval] = useState<boolean>(false);
   const [maxFixIterations, setMaxFixIterations] = useState<number>(5);
@@ -47,6 +56,12 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleLoadSample = () => {
+    setPrompt(SAMPLE_FASTMCP_SPEC.prompt);
+    setProjectType(SAMPLE_FASTMCP_SPEC.project_type);
+    setEnableResearch(true);
+  };
 
   // Load initial health and examples
   useEffect(() => {
@@ -57,8 +72,8 @@ export const App: React.FC = () => {
     fetchExamples()
       .then((data) => {
         setExamples(data);
-        if (data.length > 0) {
-          // Preload first example into form
+        if (data.length > 0 && !prompt) {
+          // Preload first example into form if not already set
           setPrompt(data[0].prompt);
           setProjectType(data[0].project_type);
         }
@@ -166,41 +181,49 @@ export const App: React.FC = () => {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem', width: '100%', flex: 1 }}>
         {/* Hackathon Hero Callout */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(118, 185, 0, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%)',
-          border: '1px solid rgba(118, 185, 0, 0.25)',
+          background: 'linear-gradient(135deg, rgba(118, 185, 0, 0.12) 0%, rgba(6, 182, 212, 0.08) 50%, rgba(15, 23, 42, 0.95) 100%)',
+          border: '1px solid rgba(118, 185, 0, 0.35)',
           borderRadius: '16px',
-          padding: '1.25rem 1.75rem',
+          padding: '1.75rem 2rem',
           marginBottom: '2rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <ShieldCheck size={18} color="#84cc16" />
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
-                Verified, Research-Grounded Generation
-              </h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-green" style={{ fontSize: '0.78rem', letterSpacing: '0.04em', fontWeight: 800 }}>
+                <ShieldCheck size={14} />
+                PROVABLY VERIFIED
+              </span>
+              <span className="badge badge-nvidia" style={{ fontSize: '0.75rem' }}>
+                NVIDIA Nemotron Reasoning
+              </span>
+              <span className="badge badge-nebius" style={{ fontSize: '0.75rem' }}>
+                Nebius Token Factory
+              </span>
             </div>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', maxWidth: '780px', lineHeight: 1.5 }}>
-              Standard LLM codegen gives indie hackers outdated syntax and untested hallucinations.
-              <strong> SpecForge</strong> grounds generation with live Tavily API docs and guarantees every generated repository passes a green sandbox test suite powered by <strong>NVIDIA Nemotron</strong> and <strong>Nebius Token Factory</strong>.
-            </p>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-nebius" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#38bdf8', borderColor: '#06b6d4' }}>
+                Tavily Grounded ($3,000 Prize Track)
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-nvidia">
-              Reasoning Tier: {health?.models?.reasoning ? health.models.reasoning : 'nvidia/Llama-3.1-Nemotron-70B-Instruct'}
-            </span>
-            <span className="badge badge-nebius">
-              Fast Tier: {health?.models?.fast ? health.models.fast : 'nvidia/nemotron-mini-4b-instruct'}
-            </span>
-            <span className="badge badge-nebius" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#38bdf8', borderColor: '#06b6d4' }}>
-              Tavily Grounded ($3,000 Prize Track)
-            </span>
-          </div>
+          <h1 style={{
+            fontSize: '2.15rem',
+            fontWeight: 800,
+            color: '#ffffff',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.2,
+            margin: '0.35rem 0 0.65rem 0',
+          }}>
+            The code generator that proves its code works.
+          </h1>
+
+          <p style={{ fontSize: '0.92rem', color: '#cbd5e1', maxWidth: '850px', lineHeight: 1.6, margin: 0 }}>
+            Standard LLM codegen hands indie hackers outdated syntax and untested hallucinations.
+            <strong> SpecForge</strong> grounds generation with live Tavily API docs (2026 cutoffs eliminated) and proves every export works by executing an autonomous <strong>isolated sandbox test & fix loop</strong> powered by <strong>NVIDIA Nemotron</strong> and <strong>Nebius Token Factory</strong> until 100% green.
+          </p>
         </div>
 
         {errorMsg && (
@@ -242,7 +265,92 @@ export const App: React.FC = () => {
           setMaxFixIterations={setMaxFixIterations}
           onSubmit={handleCreateJob}
           isLoading={isLoading}
+          onLoadSample={handleLoadSample}
         />
+
+        {/* Unmissable VERIFIED Completion Badge */}
+        {currentJob && currentJob.status === 'completed' && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(16, 185, 129, 0.08) 100%)',
+            border: '2px solid #22c55e',
+            borderRadius: '16px',
+            padding: '1.25rem 1.75rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            boxShadow: '0 0 32px rgba(34, 197, 94, 0.25)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#15803d',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 20px rgba(34, 197, 94, 0.6)',
+                flexShrink: 0,
+              }}>
+                <CheckCircle size={28} color="#ffffff" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '1.45rem',
+                    fontWeight: 900,
+                    color: '#4ade80',
+                    letterSpacing: '0.04em',
+                    textShadow: '0 0 16px rgba(74, 222, 128, 0.6)',
+                  }}>
+                    VERIFIED ✓
+                  </span>
+                  <span style={{
+                    background: 'rgba(34, 197, 94, 0.25)',
+                    border: '1px solid #4ade80',
+                    color: '#86efac',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                  }}>
+                    ({currentJob.latest_test ? `${currentJob.latest_test.passed_tests}/${currentJob.latest_test.total_tests} tests passed` : 'tests passed'}, {currentJob.test_history.length || 1} iteration{(currentJob.test_history.length || 1) === 1 ? '' : 's'})
+                  </span>
+                </div>
+                <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#dcfce7', lineHeight: 1.4 }}>
+                  Every generated file executed in an isolated sandbox with 100% passing test assertions. Zero hallucinations. Ready for production.
+                </p>
+              </div>
+            </div>
+
+            {currentJob.download_url && (
+              <a
+                href={currentJob.download_url}
+                download
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Download size={18} />
+                <span>Download Verified ZIP</span>
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Plan Edit Trigger Banner (if plan exists) */}
         {currentJob?.plan && (

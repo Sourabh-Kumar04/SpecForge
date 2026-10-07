@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Verified, Research-Grounded Code Synthesis • Hackathon Track: Coding & Agentic Engineering
+            The code generator that proves its code works • Nebius x NVIDIA AI Hackathon 2026
           </p>
         </div>
       </div>

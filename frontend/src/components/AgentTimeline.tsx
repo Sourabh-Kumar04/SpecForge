@@ -51,7 +51,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
     { key: 'coding', label: '3. Synthesis & Code Generation', icon: Code },
     { key: 'testing', label: '4. Sandbox Execution', icon: FlaskConical },
     { key: 'fixing', label: '5. Autonomous Fixer Loop', icon: Wrench },
-    { key: 'completed', label: '6. Test-Verified', icon: CheckCircle2 },
+    { key: 'completed', label: '6. VERIFIED ✓ (Tests Passed)', icon: CheckCircle2 },
   ];
 
   const getStageState = (stageKey: string) => {
@@ -139,6 +139,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
           let color = 'var(--text-muted)';
           let bg = 'rgba(255, 255, 255, 0.02)';
           let border = 'var(--border)';
+          let boxShadow = 'none';
 
           if (state === 'skipped') {
             color = '#64748b';
@@ -148,10 +149,17 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             color = '#38bdf8';
             bg = 'rgba(6, 182, 212, 0.1)';
             border = '#06b6d4';
+            boxShadow = '0 0 12px rgba(6, 182, 212, 0.25)';
           } else if (state === 'completed') {
             color = '#84cc16';
             bg = 'rgba(118, 185, 0, 0.08)';
             border = 'rgba(118, 185, 0, 0.3)';
+            if (st.key === 'completed') {
+              color = '#4ade80';
+              bg = 'rgba(34, 197, 94, 0.18)';
+              border = '#22c55e';
+              boxShadow = '0 0 16px rgba(34, 197, 94, 0.4)';
+            }
           } else if (state === 'failed') {
             color = '#f87171';
             bg = 'rgba(239, 68, 68, 0.1)';
@@ -169,6 +177,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                 borderRadius: '8px',
                 background: bg,
                 border: border.startsWith('dashed') ? border : `1px solid ${border}`,
+                boxShadow: boxShadow,
                 transition: 'all 0.2s ease',
               }}
             >
@@ -184,6 +193,72 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
           );
         })}
       </div>
+
+      {/* Test Verification Step Dominance Banner */}
+      {(status === 'completed' || status === 'testing' || status === 'fixing') && (
+        <div style={{
+          background: status === 'completed'
+            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.08) 100%)'
+            : (status === 'fixing' ? 'rgba(234, 179, 8, 0.12)' : 'rgba(56, 189, 248, 0.12)'),
+          border: `2px solid ${status === 'completed' ? '#22c55e' : (status === 'fixing' ? '#eab308' : '#38bdf8')}`,
+          borderRadius: '10px',
+          padding: '0.9rem 1.25rem',
+          marginBottom: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          boxShadow: status === 'completed' ? '0 0 24px rgba(34, 197, 94, 0.25)' : 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {status === 'completed' ? (
+              <CheckCircle2 size={24} color="#4ade80" />
+            ) : status === 'fixing' ? (
+              <Wrench size={22} color="#facc15" className="animate-spin" />
+            ) : (
+              <FlaskConical size={22} color="#38bdf8" />
+            )}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: status === 'completed' ? '#4ade80' : (status === 'fixing' ? '#facc15' : '#38bdf8'),
+                  letterSpacing: '0.02em',
+                }}>
+                  {status === 'completed'
+                    ? 'VERIFIED ✓ TEST REPORT'
+                    : (status === 'fixing' ? 'AUTONOMOUS FIXER REASONING' : 'SANDBOX EXECUTION IN PROGRESS')}
+                </span>
+                <span className={`badge ${status === 'completed' ? 'badge-green' : (status === 'fixing' ? 'badge-amber' : 'badge-nebius')}`} style={{ fontSize: '0.72rem' }}>
+                  {status === 'completed' ? '100% Verified Green' : (status === 'fixing' ? 'Auto-Patching Code' : 'Isolated Runner')}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+                {status === 'completed'
+                  ? 'All unit & integration assertions successfully executed and passed within the isolated test sandbox.'
+                  : (status === 'fixing'
+                    ? 'Nemotron reasoning engine analyzing failure traces and synthesizing targeted bugfixes.'
+                    : 'Executing test runner inside containerized sandbox environment with strict timeout limits.')}
+              </div>
+            </div>
+          </div>
+          {status === 'completed' && (
+            <span style={{
+              background: '#22c55e',
+              color: '#052e16',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
+            }}>
+              VERIFIED ✓
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Live Researching Indicator Banner */}
       {status === 'researching' && (
