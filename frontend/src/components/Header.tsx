@@ -1,12 +1,15 @@
 import React from 'react';
-import { Flame, Cpu, Search, Activity } from 'lucide-react';
-import { HealthInfo } from '../types';
+import { Flame, Cpu, Search, Activity, DollarSign, SlidersHorizontal } from 'lucide-react';
+import { HealthInfo, JobDetail, SettingsInfo } from '../types';
 
 interface HeaderProps {
   health: HealthInfo | null;
+  currentJob?: JobDetail | null;
+  onOpenSettings?: () => void;
+  settings?: SettingsInfo | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ health }) => {
+export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettings, settings }) => {
   const isLive = health ? !health.mock_mode : false;
 
   const fastModelName = health?.models?.fast
@@ -15,6 +18,10 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
   const reasoningModelName = health?.models?.reasoning
     ? health.models.reasoning.split('/').pop() || health.models.reasoning
     : 'Nemotron Reasoning';
+
+  const spendAmount = currentJob?.spend?.total_cost_usd ?? 0.0;
+  const spendCap = currentJob?.spend?.spend_cap_usd ?? (settings?.spend_cap_usd || 2.0);
+  const isCapExceeded = currentJob?.spend?.is_cap_exceeded ?? false;
 
   return (
     <header
@@ -100,6 +107,23 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
       >
         {health ? (
           <>
+            {/* Running Spend Telemetry Badge */}
+            <div
+              className={`badge ${isCapExceeded ? 'badge-red' : 'badge-slate'}`}
+              style={{
+                padding: '0.3rem 0.65rem',
+                border: isCapExceeded ? '1px solid #ef4444' : '1px solid rgba(255, 107, 26, 0.3)',
+                color: isCapExceeded ? '#f87171' : 'var(--accent-amber-bright)',
+                fontFamily: 'var(--font-mono)',
+              }}
+              title={`Estimated Nebius Token Spend for current job.\nCap: $${spendCap.toFixed(2)} USD (paused gracefully if reached).\nBased on published Token Factory rates.`}
+            >
+              <DollarSign size={13} color={isCapExceeded ? '#ef4444' : 'var(--accent-amber-bright)'} />
+              <span>
+                SPEND: ${spendAmount.toFixed(4)} / ${spendCap.toFixed(2)}
+              </span>
+            </div>
+
             {/* Live Mode Telemetry */}
             <div
               className={`badge ${isLive ? 'badge-green' : 'badge-amber'}`}
@@ -141,6 +165,25 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
                 TAVILY: {health.tavily_enabled ? 'ONLINE' : 'FALLBACK'}
               </span>
             </div>
+
+            {/* Settings Trigger Button */}
+            {onOpenSettings && (
+              <button
+                onClick={onOpenSettings}
+                className="btn btn-secondary"
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+                title="Configure Nebius & Tavily credentials and spend caps"
+              >
+                <SlidersHorizontal size={13} />
+                <span>Settings</span>
+              </button>
+            )}
           </>
         ) : (
           <div className="badge badge-slate" style={{ color: 'var(--text-muted)' }}>

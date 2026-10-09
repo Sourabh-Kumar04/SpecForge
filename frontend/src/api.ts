@@ -7,6 +7,7 @@ import {
   ProjectType,
   PreviewResponse,
   RefineResult,
+  SettingsInfo,
 } from './types';
 
 const BASE_URL = '';
@@ -150,6 +151,31 @@ export async function refineJob(jobId: string, instruction: string): Promise<Ref
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to refine codebase: ${text}`);
+  }
+  return res.json();
+}
+
+export async function fetchSettings(): Promise<SettingsInfo> {
+  const res = await fetch(`${BASE_URL}/api/settings`);
+  if (!res.ok) throw new Error(`Failed to fetch settings: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateSettings(params: {
+  nebius_api_key?: string;
+  tavily_api_key?: string;
+  spend_cap_usd?: number;
+  nebius_model_fast?: string;
+  nebius_model_reasoning?: string;
+}): Promise<SettingsInfo> {
+  const res = await fetch(`${BASE_URL}/api/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to update settings: ${text}`);
   }
   return res.json();
 }

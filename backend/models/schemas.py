@@ -17,6 +17,7 @@ class JobStatus(str, Enum):
     FIXING = "fixing"
     COMPLETED = "completed"
     FAILED = "failed"
+    PAUSED = "paused"
 
 class SpecInput(BaseModel):
     prompt: str = Field(..., description="Plain-English project requirement or specification")
@@ -108,6 +109,22 @@ class PreviewResponse(BaseModel):
     terminal_output: Optional[str] = None
     message: str
 
+class JobSpend(BaseModel):
+    total_cost_usd: float = 0.0
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
+    total_tokens: int = 0
+    spend_cap_usd: float = 2.00
+    is_cap_exceeded: bool = False
+    by_stage: Dict[str, float] = Field(default_factory=lambda: {
+        "planning": 0.0,
+        "research": 0.0,
+        "coding": 0.0,
+        "testing": 0.0,
+        "fixing": 0.0,
+    })
+    tokens_by_stage: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+
 class JobDetail(BaseModel):
     job_id: str
     spec: SpecInput
@@ -124,4 +141,24 @@ class JobDetail(BaseModel):
     download_url: Optional[str] = None
     workspace_dir: Optional[str] = None
     refinements: List[RefineResult] = []
+    spend: JobSpend = Field(default_factory=JobSpend)
+
+class SettingsResponse(BaseModel):
+    nebius_api_key_set: bool
+    nebius_api_key_masked: str
+    nebius_base_url: str
+    nebius_model_fast: str
+    nebius_model_reasoning: str
+    tavily_api_key_set: bool
+    tavily_api_key_masked: str
+    spend_cap_usd: float
+    mock_mode: bool
+    tavily_enabled: bool
+
+class SettingsUpdateRequest(BaseModel):
+    nebius_api_key: Optional[str] = None
+    tavily_api_key: Optional[str] = None
+    spend_cap_usd: Optional[float] = None
+    nebius_model_fast: Optional[str] = None
+    nebius_model_reasoning: Optional[str] = None
 

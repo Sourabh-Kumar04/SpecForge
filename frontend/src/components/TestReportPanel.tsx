@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { TestResult } from '../types';
+import { TestResult, JobSpend } from '../types';
 import {
   XCircle,
   Terminal,
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  DollarSign,
+  Coins,
 } from 'lucide-react';
 
 interface TestReportPanelProps {
   testHistory: TestResult[];
   latestTest?: TestResult;
+  spend?: JobSpend;
 }
 
-export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, latestTest }) => {
+export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, latestTest, spend }) => {
   const [selectedIteration, setSelectedIteration] = useState<number>(
     latestTest?.iteration || (testHistory.length > 0 ? testHistory[testHistory.length - 1].iteration : 1)
   );
@@ -317,6 +320,81 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
           </div>
         </div>
       </div>
+
+      {/* Spend & Token Transparency Breakdown */}
+      {spend && (
+        <div
+          style={{
+            background: 'rgba(10, 11, 15, 0.85)',
+            borderRadius: 'var(--radius-sm)',
+            border: spend.is_cap_exceeded ? '1px solid #ef4444' : '1px solid rgba(255, 107, 26, 0.25)',
+            padding: '0.9rem 1rem',
+            marginBottom: '1.25rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.65rem',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <DollarSign size={14} color={spend.is_cap_exceeded ? '#ef4444' : 'var(--accent-amber-bright)'} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ffffff' }}>
+                Nebius Token Factory Spend Breakdown
+              </span>
+              <span className={`badge ${spend.is_cap_exceeded ? 'badge-red' : 'badge-amber'}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                {spend.is_cap_exceeded ? 'CAP REACHED' : 'ESTIMATE'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: spend.is_cap_exceeded ? '#f87171' : 'var(--accent-amber-bright)' }}>
+              ${spend.total_cost_usd.toFixed(4)} / ${spend.spend_cap_usd.toFixed(2)} USD Cap
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+              gap: '0.5rem',
+              marginBottom: '0.5rem',
+            }}
+          >
+            {['planning', 'research', 'coding', 'testing', 'fixing'].map((stg) => {
+              const stgCost = spend.by_stage?.[stg] ?? 0.0;
+              return (
+                <div
+                  key={stg}
+                  style={{
+                    backgroundColor: '#161b22',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+                    {stg}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', fontFamily: 'var(--font-mono)', marginTop: '0.1rem' }}>
+                    ${stgCost.toFixed(4)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexWrap: 'wrap', gap: '0.3rem' }}>
+            <span>
+              Tokens: {spend.total_tokens.toLocaleString()} ({spend.total_prompt_tokens.toLocaleString()} in / {spend.total_completion_tokens.toLocaleString()} out)
+            </span>
+            <span style={{ color: '#8b949e' }}>Rates based on published Nebius Token Factory tiers</span>
+          </div>
+        </div>
+      )}
 
       {/* Pytest Output Console */}
       <div

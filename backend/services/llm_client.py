@@ -108,10 +108,38 @@ class LLMClient:
         else:
             logger.info("Operating in MOCK_LLM mode (all generation verified locally)")
 
+    def reload_settings(self):
+        self.is_mock = settings.effective_mock_llm
+        self.fast_model = settings.nebius_model_fast
+        self.reasoning_model = settings.nebius_model_reasoning
+        if not self.is_mock and settings.nebius_api_key:
+            self.client = OpenAI(
+                base_url=settings.nebius_base_url,
+                api_key=settings.nebius_api_key,
+            )
+            logger.info("Reloaded Nebius Token Factory client targeting NVIDIA Nemotron models")
+        else:
+            self.client = None
+            logger.info("Operating in MOCK_LLM mode after reload")
+
     def _get_model_id(self, tier: str = "reasoning") -> str:
         if tier == "fast":
             return self.fast_model
         return self.reasoning_model
+
+    def _record_mock_usage(self, prompt_text: str, completion_text: str, tier: str) -> None:
+        p_tokens = max(10, len(prompt_text) // 4)
+        c_tokens = max(10, len(completion_text) // 4)
+        t_tokens = p_tokens + c_tokens
+        self.total_prompt_tokens += p_tokens
+        self.total_completion_tokens += c_tokens
+        self.total_tokens += t_tokens
+        self.last_call_usage = {
+            "model_id": self._get_model_id(tier),
+            "prompt_tokens": p_tokens,
+            "completion_tokens": c_tokens,
+            "total_tokens": t_tokens,
+        }
 
     def complete(
         self,
@@ -128,7 +156,9 @@ class LLMClient:
         Handles the Nemotron gotcha where content may be empty and reasoning_content contains the answer.
         """
         if self.is_mock:
-            return self._mock_completion(system_prompt, user_prompt, tier)
+            res, reasoning = self._mock_completion(system_prompt, user_prompt, tier)
+            self._record_mock_usage(system_prompt + " " + user_prompt, res + (reasoning or ""), tier)
+            return res, reasoning
 
         model_id = self._get_model_id(tier)
         try:
@@ -156,6 +186,7 @@ class LLMClient:
                 self.total_completion_tokens += c_tokens
                 self.total_tokens += t_tokens
                 self.last_call_usage = {
+                    "model_id": model_id,
                     "prompt_tokens": p_tokens,
                     "completion_tokens": c_tokens,
                     "total_tokens": t_tokens
@@ -182,7 +213,9 @@ class LLMClient:
 
         except Exception as e:
             logger.error(f"Error calling Nebius API ({model_id}): {e}. Falling back to mock generator.")
-            return self._mock_completion(system_prompt, user_prompt, tier)
+            res, reasoning = self._mock_completion(system_prompt, user_prompt, tier)
+            self._record_mock_usage(system_prompt + " " + user_prompt, res + (reasoning or ""), tier)
+            return res, reasoning
 
     def complete_json(
         self,

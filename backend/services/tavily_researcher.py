@@ -60,6 +60,10 @@ class TavilyResearcher:
         self.api_key = settings.tavily_api_key
         self.is_mock = settings.effective_mock_tavily
 
+    def reload_settings(self):
+        self.api_key = settings.tavily_api_key
+        self.is_mock = settings.effective_mock_tavily
+
     async def search_documentation(self, queries: List[str]) -> List[ResearchDoc]:
         results: List[ResearchDoc] = []
         for query in queries[:3]:  # Top 3 targeted queries

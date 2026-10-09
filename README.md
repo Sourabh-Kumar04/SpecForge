@@ -250,31 +250,68 @@ cd ..
 ```
 
 ### 4. Running the Application
-Launch the unified server (serves the API and pre-compiled frontend):
+Launch the unified server (serves the API and pre-compiled frontend from `frontend/dist/`):
 ```bash
-.venv/bin/python3 backend/main.py
+# Recommended standard Python execution (module syntax ensures clean package imports):
+python3 -m backend.main
+# Or explicitly with system python:
+/usr/bin/python3 -m backend.main
 ```
 Open your browser at **http://localhost:8000**.
 
 For interactive frontend development with Hot Module Replacement (HMR):
 ```bash
-# In terminal 1 (backend):
-.venv/bin/python3 backend/main.py
+# In terminal 1 (backend API server):
+python3 -m backend.main
 
-# In terminal 2 (frontend):
+# In terminal 2 (frontend Vite dev server with proxy to :8000):
 cd frontend && npm run dev
 ```
 Navigate to **http://localhost:5173**.
 
 ---
 
+## 🛠️ Troubleshooting & Common Issues
+
+### 1. Nebius Token Factory 404 Model Not Found
+- **Symptom**: `404 Client Error: Model not found` when generating specs or refining code.
+- **Cause**: Nebius model catalog names are periodically updated (e.g. `nvidia/nemotron-mini-4b-instruct` vs `nvidia/nemotron-3-super-120b-a12b` or `nvidia/Nemotron-3-Ultra-550b-a55b`).
+- **Fix**: Open the in-app **BYOK Settings** panel (top right in web UI) or edit your `.env` file to set active catalog identifiers:
+  ```env
+  NEBIUS_MODEL_FAST=nvidia/nemotron-3-super-120b-a12b
+  NEBIUS_MODEL_REASONING=nvidia/Nemotron-3-Ultra-550b-a55b
+  ```
+  Or leave `MOCK_LLM=true` to test offline with 0 credentials.
+
+### 2. Tavily API Key Missing / 401 Unauthorized
+- **Symptom**: Warning in logs regarding Tavily search or HTTP 401.
+- **Resolution**: Tavily search is optional. If `TAVILY_API_KEY` is not provided, SpecForge seamlessly falls back to its offline grounded knowledge base (Click 8.1+, FastAPI 0.110+, Pydantic v2, Pytest 8.0+, React 19). To activate live web search, provide your key via the in-app Settings panel or set `TAVILY_API_KEY=tvly-...` in `.env`.
+
+### 3. Port Conflicts (`8000` or `5173` already in use)
+- **Symptom**: `OSError: [Errno 98] Address already in use`.
+- **Fix**:
+  - Check what process is occupying port 8000: `lsof -i :8000` (or `kill $(lsof -t -i:8000)`).
+  - You can also run the backend on a different port:
+    ```bash
+    python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8080
+    ```
+
+### 4. Job Paused Due to Spend Cap (`PAUSED`)
+- **Symptom**: Job status shows `PAUSED: Spend cap reached ($X.XX / $2.00)`.
+- **Fix**: SpecForge protects against runaway token costs. To increase the limit for complex projects, click **Adjust Spend Cap** in the banner or update `NEBIUS_SPEND_CAP_USD` (e.g. `5.00`) in the in-app Settings modal or `.env`.
+
+---
+
 ## 🧪 Testing & Verification
 
-SpecForge includes rigorous unit and integration tests across all layers:
+SpecForge includes rigorous unit and integration tests across all layers (classification, spend tracking, BYOK settings, sandbox, and orchestrator):
 ```bash
-.venv/bin/pytest -v backend/tests
+python3 -m pytest -v backend/tests
 ```
 **Test Coverage Highlights:**
+- `test_failure_classifier.py`: Verifies diagnosis and classification of `ModuleNotFoundError` (local file vs 3rd-party dep), `SyntaxError`, `NameError`, and assertion errors, preventing requirements.txt thrashing.
+- `test_spend_tracking.py`: Tests per-job Token Factory cost estimation and graceful pause when exceeding `NEBIUS_SPEND_CAP_USD`.
+- `test_settings.py`: Verifies BYOK endpoint updates, credential masking, and in-memory client reloading.
 - `test_llm_client.py`: Verifies JSON extraction from code fences, raw text, and the critical Nemotron `reasoning_content` fallback when `content` is empty.
 - `test_sandbox.py`: Integration tests validating that real Python pytest test suites run isolated in the sandbox, that failure tracebacks are captured, and that execution timeouts protect against infinite loops.
 - `test_orchestrator.py`: Full end-to-end pipeline test generating a complete project workspace on disk, running sandbox tests, and creating downloadable ZIP packages.

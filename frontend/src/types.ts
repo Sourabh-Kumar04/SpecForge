@@ -9,7 +9,8 @@ export type JobStatus =
   | 'testing'
   | 'fixing'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'paused';
 
 export interface PlannedFile {
   path: string;
@@ -88,6 +89,24 @@ export interface PreviewResponse {
   message: string;
 }
 
+export interface JobSpend {
+  total_cost_usd: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  total_tokens: number;
+  spend_cap_usd: number;
+  is_cap_exceeded: boolean;
+  by_stage: {
+    planning?: number;
+    research?: number;
+    coding?: number;
+    testing?: number;
+    fixing?: number;
+    [key: string]: number | undefined;
+  };
+  tokens_by_stage?: Record<string, { prompt: number; completion: number; total: number }>;
+}
+
 export interface JobDetail {
   job_id: string;
   spec: {
@@ -110,6 +129,7 @@ export interface JobDetail {
   download_url?: string;
   workspace_dir?: string;
   refinements?: RefineResult[];
+  spend?: JobSpend;
 }
 
 export interface ExampleSpec {
@@ -129,5 +149,18 @@ export interface HealthInfo {
     fast: string;
     reasoning: string;
   };
+  tavily_enabled: boolean;
+}
+
+export interface SettingsInfo {
+  nebius_api_key_set: boolean;
+  nebius_api_key_masked: string;
+  nebius_base_url: string;
+  nebius_model_fast: string;
+  nebius_model_reasoning: string;
+  tavily_api_key_set: boolean;
+  tavily_api_key_masked: string;
+  spend_cap_usd: number;
+  mock_mode: boolean;
   tavily_enabled: boolean;
 }

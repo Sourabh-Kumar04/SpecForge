@@ -18,13 +18,20 @@ from backend.models.schemas import (
     TestResult,
     DiffChange,
     RefineResult,
+    JobSpend,
 )
 from backend.services.llm_client import llm_client
 from backend.services.tavily_researcher import tavily_researcher
 from backend.services.sandbox import sandbox_runner
 from backend.services.storage import storage_service
+from backend.services.failure_classifier import classify_failure, FailureCategory
+from backend.services.pricing import calculate_llm_cost
 
 logger = logging.getLogger("specforge.orchestrator")
+
+class SpendCapExceededError(Exception):
+    """Raised when job token spend exceeds configured NEBIUS_SPEND_CAP_USD limit."""
+    pass
 
 SYSTEM_PLANNER_PROMPT = """You are the Lead Software Architect in SpecForge, powered by NVIDIA Nemotron reasoning models.
 Your role: Given a project specification and target framework, decompose it into a clean, modern, testable architecture.
@@ -76,6 +83,70 @@ Return a JSON object containing:
 class AgenticOrchestrator:
     """Coordinates Planner -> Researcher -> Coder -> Tester -> Sandbox Fixer Loop."""
 
+    def check_spend_cap_before_call(self, job_id: str):
+        job = storage_service.get_job(job_id)
+        if job and job.spend and job.spend.total_cost_usd >= job.spend.spend_cap_usd:
+            job.spend.is_cap_exceeded = True
+            storage_service.save_spend(job_id, job.spend)
+            storage_service.update_job_status(job_id, JobStatus.PAUSED, error=f"Spend cap of ${job.spend.spend_cap_usd:.2f} reached.")
+            raise SpendCapExceededError(f"Job {job_id} spend cap already reached: ${job.spend.total_cost_usd:.4f} >= ${job.spend.spend_cap_usd:.2f}")
+
+    async def record_llm_spend(self, job_id: str, stage: str):
+        usage = getattr(llm_client, "last_call_usage", {})
+        if not usage:
+            return
+        p_tokens = usage.get("prompt_tokens", 0)
+        c_tokens = usage.get("completion_tokens", 0)
+        t_tokens = usage.get("total_tokens", 0)
+        model_id = usage.get("model_id") or settings.nebius_model_reasoning
+        call_cost = calculate_llm_cost(model_id, p_tokens, c_tokens)
+
+        job = storage_service.get_job(job_id)
+        if not job:
+            return
+        spend = job.spend or JobSpend(spend_cap_usd=settings.nebius_spend_cap_usd)
+        spend.total_prompt_tokens += p_tokens
+        spend.total_completion_tokens += c_tokens
+        spend.total_tokens += t_tokens
+        spend.total_cost_usd = round(spend.total_cost_usd + call_cost, 6)
+        spend.spend_cap_usd = settings.nebius_spend_cap_usd
+
+        stage_key = stage.lower()
+        if stage_key not in spend.by_stage:
+            spend.by_stage[stage_key] = 0.0
+        spend.by_stage[stage_key] = round(spend.by_stage[stage_key] + call_cost, 6)
+
+        if stage_key not in spend.tokens_by_stage:
+            spend.tokens_by_stage[stage_key] = {"prompt": 0, "completion": 0, "total": 0}
+        spend.tokens_by_stage[stage_key]["prompt"] += p_tokens
+        spend.tokens_by_stage[stage_key]["completion"] += c_tokens
+        spend.tokens_by_stage[stage_key]["total"] += t_tokens
+
+        # Check spend cap threshold
+        if spend.total_cost_usd >= spend.spend_cap_usd:
+            spend.is_cap_exceeded = True
+            storage_service.save_spend(job_id, spend)
+            storage_service.update_job_status(job_id, JobStatus.PAUSED, error=f"Spend cap of ${spend.spend_cap_usd:.2f} reached.")
+            await storage_service.emit_event(
+                job_id, "pipeline", "status",
+                f"Pipeline paused: spend cap exceeded (${spend.total_cost_usd:.4f} >= ${spend.spend_cap_usd:.2f}). Pausing further generation to prevent runaway costs.",
+                {"spend": spend.model_dump(), "paused": True}
+            )
+            raise SpendCapExceededError(f"Job {job_id} spend cap exceeded: ${spend.total_cost_usd:.4f} >= ${spend.spend_cap_usd:.2f}")
+
+        storage_service.save_spend(job_id, spend)
+        await storage_service.emit_event(
+            job_id, stage, "log",
+            f"Nebius usage: {t_tokens} tokens (${call_cost:.5f}). Running spend: ${spend.total_cost_usd:.4f} / ${spend.spend_cap_usd:.2f}",
+            {
+                "call_cost_usd": call_cost,
+                "running_spend_usd": spend.total_cost_usd,
+                "spend_cap_usd": spend.spend_cap_usd,
+                "stage_cost_usd": spend.by_stage[stage_key],
+                "model": model_id,
+            }
+        )
+
     async def start_job(self, job_id: str, spec: SpecInput):
         """Entry point for executing a SpecForge job asynchronously."""
         try:
@@ -90,6 +161,10 @@ class AgenticOrchestrator:
 
             await self.resume_job_after_plan(job_id, plan)
 
+        except SpendCapExceededError as sce:
+            logger.warning(f"Job {job_id} paused due to spend cap: {sce}")
+            storage_service.update_job_status(job_id, JobStatus.PAUSED, error=str(sce))
+            return
         except Exception as e:
             logger.exception(f"Job {job_id} encountered fatal error: {e}")
             storage_service.update_job_status(job_id, JobStatus.FAILED, error=str(e))
@@ -99,111 +174,123 @@ class AgenticOrchestrator:
 
     async def resume_job_after_plan(self, job_id: str, plan: Plan):
         """Continues execution after plan is created/approved."""
-        job = storage_service.get_job(job_id)
-        if not job:
-            raise ValueError(f"Job {job_id} not found")
+        try:
+            job = storage_service.get_job(job_id)
+            if not job:
+                raise ValueError(f"Job {job_id} not found")
 
-        spec = job.spec
-        storage_service.save_plan(job_id, plan)
+            spec = job.spec
+            storage_service.save_plan(job_id, plan)
 
-        # 2. RESEARCHER STAGE (Tavily doc grounding)
-        research_docs: List[ResearchDoc] = []
-        if spec.enable_research:
-            queries = plan.research_queries if plan.research_queries else [f"{spec.project_type.value} modern best practices 2026"]
-            storage_service.update_job_status(job_id, JobStatus.RESEARCHING)
-            await storage_service.emit_event(
-                job_id, "researcher", "action", f"Researching latest API docs via Tavily AI Search for {len(queries)} queries...",
-                {"queries": queries}
-            )
-            research_docs = await tavily_researcher.search_documentation(queries)
-            storage_service.save_research(job_id, research_docs)
-            for doc in research_docs:
+            # 2. RESEARCHER STAGE (Tavily doc grounding)
+            research_docs: List[ResearchDoc] = []
+            if spec.enable_research:
+                queries = plan.research_queries if plan.research_queries else [f"{spec.project_type.value} modern best practices 2026"]
+                storage_service.update_job_status(job_id, JobStatus.RESEARCHING)
                 await storage_service.emit_event(
-                    job_id, "researcher", "log", f"Grounded research: {doc.title}",
-                    {"url": doc.url, "summary": doc.summary[:200], "key_apis": doc.key_apis}
+                    job_id, "researcher", "action", f"Researching latest API docs via Tavily AI Search for {len(queries)} queries...",
+                    {"queries": queries}
                 )
-        else:
-            await storage_service.emit_event(
-                job_id, "researcher", "log", "Tavily research grounding toggled OFF by user. Proceeding directly to code synthesis."
-            )
-
-        # 3. CODER STAGE
-        storage_service.update_job_status(job_id, JobStatus.CODING)
-        await storage_service.emit_event(
-            job_id, "coder", "action", "Synthesizing project files using NVIDIA Nemotron..."
-        )
-        files = await self._run_coder(job_id, spec, plan, research_docs)
-        for f in files:
-            storage_service.save_file(job_id, f)
-            await storage_service.emit_event(
-                job_id, "coder", "file_written", f"Generated: {f.path} ({len(f.content.splitlines())} lines)"
-            )
-
-        # 4. TEST GENERATION STAGE
-        storage_service.update_job_status(job_id, JobStatus.TESTING)
-        await storage_service.emit_event(
-            job_id, "tester", "action", "Generating comprehensive unit & integration test suites..."
-        )
-        test_files = await self._run_tester(job_id, spec, plan, files)
-        for tf in test_files:
-            storage_service.save_file(job_id, tf)
-            await storage_service.emit_event(
-                job_id, "tester", "file_written", f"Generated test suite: {tf.path}"
-            )
-
-        # 5. SANDBOX & FIXER LOOP (up to max_fix_iterations)
-        ws = storage_service.get_job_workspace(job_id)
-        max_iters = spec.max_fix_iterations or settings.max_fix_iterations
-        current_iter = 1
-        all_passed = False
-
-        while current_iter <= max_iters:
-            storage_service.update_job_status(job_id, JobStatus.TESTING if current_iter == 1 else JobStatus.FIXING)
-            await storage_service.emit_event(
-                job_id, "sandbox", "action", f"Running sandbox test verification (Iteration {current_iter}/{max_iters})..."
-            )
-
-            test_result = await sandbox_runner.run_tests(ws, spec.project_type, iteration=current_iter)
-            storage_service.save_test_result(job_id, test_result)
-
-            if test_result.passed:
-                all_passed = True
-                await storage_service.emit_event(
-                    job_id, "sandbox", "test_run",
-                    f"All tests passed successfully ({test_result.passed_tests}/{test_result.total_tests} passed in {test_result.duration_seconds}s)!",
-                    {"iteration": current_iter, "passed": True, "output": test_result.output}
-                )
-                break
+                research_docs = await tavily_researcher.search_documentation(queries)
+                storage_service.save_research(job_id, research_docs)
+                for doc in research_docs:
+                    await storage_service.emit_event(
+                        job_id, "researcher", "log", f"Grounded research: {doc.title}",
+                        {"url": doc.url, "summary": doc.summary[:200], "key_apis": doc.key_apis}
+                    )
             else:
                 await storage_service.emit_event(
-                    job_id, "fixer", "test_run",
-                    f"Sandbox tests failed ({test_result.failed_tests} failed). Triggering Nemotron Fixer reasoning loop...",
-                    {"iteration": current_iter, "passed": False, "output": test_result.output[:600]}
+                    job_id, "researcher", "log", "Tavily research grounding toggled OFF by user. Proceeding directly to code synthesis."
                 )
 
-                if current_iter >= max_iters:
+            # 3. CODER STAGE
+            storage_service.update_job_status(job_id, JobStatus.CODING)
+            await storage_service.emit_event(
+                job_id, "coder", "action", "Synthesizing project files using NVIDIA Nemotron..."
+            )
+            files = await self._run_coder(job_id, spec, plan, research_docs)
+            for f in files:
+                storage_service.save_file(job_id, f)
+                await storage_service.emit_event(
+                    job_id, "coder", "file_written", f"Generated: {f.path} ({len(f.content.splitlines())} lines)"
+                )
+
+            # 4. TEST GENERATION STAGE
+            storage_service.update_job_status(job_id, JobStatus.TESTING)
+            await storage_service.emit_event(
+                job_id, "tester", "action", "Generating comprehensive unit & integration test suites..."
+            )
+            test_files = await self._run_tester(job_id, spec, plan, files)
+            for tf in test_files:
+                storage_service.save_file(job_id, tf)
+                await storage_service.emit_event(
+                    job_id, "tester", "file_written", f"Generated test suite: {tf.path}"
+                )
+
+            # 5. SANDBOX & FIXER LOOP (up to max_fix_iterations)
+            ws = storage_service.get_job_workspace(job_id)
+            max_iters = spec.max_fix_iterations or settings.max_fix_iterations
+            current_iter = 1
+            all_passed = False
+
+            while current_iter <= max_iters:
+                storage_service.update_job_status(job_id, JobStatus.TESTING if current_iter == 1 else JobStatus.FIXING)
+                await storage_service.emit_event(
+                    job_id, "sandbox", "action", f"Running sandbox test verification (Iteration {current_iter}/{max_iters})..."
+                )
+
+                test_result = await sandbox_runner.run_tests(ws, spec.project_type, iteration=current_iter)
+                storage_service.save_test_result(job_id, test_result)
+
+                if test_result.passed:
+                    all_passed = True
                     await storage_service.emit_event(
-                        job_id, "fixer", "error", f"Reached maximum fixer iterations ({max_iters}). Stopping loop."
+                        job_id, "sandbox", "test_run",
+                        f"All tests passed successfully ({test_result.passed_tests}/{test_result.total_tests} passed in {test_result.duration_seconds}s)!",
+                        {"iteration": current_iter, "passed": True, "output": test_result.output}
                     )
                     break
+                else:
+                    await storage_service.emit_event(
+                        job_id, "fixer", "test_run",
+                        f"Sandbox tests failed ({test_result.failed_tests} failed). Triggering Nemotron Fixer reasoning loop...",
+                        {"iteration": current_iter, "passed": False, "output": test_result.output[:600]}
+                    )
 
-                # Run Fixer Agent
-                storage_service.update_job_status(job_id, JobStatus.FIXING)
-                await self._run_fixer(job_id, spec, plan, test_result.output, current_iter)
-                current_iter += 1
+                    if current_iter >= max_iters:
+                        await storage_service.emit_event(
+                            job_id, "fixer", "error", f"Reached maximum fixer iterations ({max_iters}). Stopping loop."
+                        )
+                        break
 
-        # 6. AUTO-README & PACKAGING
-        readme_file = self._generate_readme(job_id, spec, plan, all_passed, current_iter)
-        storage_service.save_file(job_id, readme_file)
-        storage_service.create_zip_export(job_id)
+                    # Run Fixer Agent
+                    storage_service.update_job_status(job_id, JobStatus.FIXING)
+                    await self._run_fixer(job_id, spec, plan, test_result.output, current_iter)
+                    current_iter += 1
 
-        final_status = JobStatus.COMPLETED if all_passed else JobStatus.FAILED
-        storage_service.update_job_status(job_id, final_status)
-        await storage_service.emit_event(
-            job_id, "pipeline", "status",
-            f"SpecForge repository generation completed with status: {final_status.value}. ZIP bundle ready.",
-            {"all_passed": all_passed, "iterations": current_iter}
-        )
+            # 6. AUTO-README & PACKAGING
+            readme_file = self._generate_readme(job_id, spec, plan, all_passed, current_iter)
+            storage_service.save_file(job_id, readme_file)
+            storage_service.create_zip_export(job_id)
+
+            final_status = JobStatus.COMPLETED if all_passed else JobStatus.FAILED
+            storage_service.update_job_status(job_id, final_status)
+            await storage_service.emit_event(
+                job_id, "pipeline", "status",
+                f"SpecForge repository generation completed with status: {final_status.value}. ZIP bundle ready.",
+                {"all_passed": all_passed, "iterations": current_iter}
+            )
+
+        except SpendCapExceededError as sce:
+            logger.warning(f"Job {job_id} paused due to spend cap: {sce}")
+            storage_service.update_job_status(job_id, JobStatus.PAUSED, error=str(sce))
+            return
+        except Exception as e:
+            logger.exception(f"Job {job_id} encountered error during execution: {e}")
+            storage_service.update_job_status(job_id, JobStatus.FAILED, error=str(e))
+            await storage_service.emit_event(
+                job_id, "pipeline", "error", f"Pipeline failed: {str(e)}"
+            )
 
     async def _run_planner(self, job_id: str, spec: SpecInput) -> Plan:
         storage_service.update_job_status(job_id, JobStatus.PLANNING)
@@ -218,6 +305,7 @@ class AgenticOrchestrator:
             # Deterministic, high quality plan based on spec
             plan = self._generate_mock_plan(spec)
         else:
+            self.check_spend_cap_before_call(job_id)
             data, reasoning = llm_client.complete_json(
                 system_prompt=SYSTEM_PLANNER_PROMPT,
                 user_prompt=user_prompt,
@@ -229,6 +317,7 @@ class AgenticOrchestrator:
                 )
             plan = Plan.model_validate(data)
 
+        await self.record_llm_spend(job_id, "planning")
         storage_service.save_plan(job_id, plan)
         await storage_service.emit_event(
             job_id, "planner", "action", f"Architecture plan created: {plan.title} ({len(plan.files)} files planned)"
@@ -243,33 +332,36 @@ class AgenticOrchestrator:
         research_docs: List[ResearchDoc]
     ) -> List[GeneratedFile]:
         if settings.effective_mock_llm:
-            return self._generate_mock_code(spec, plan)
+            files = self._generate_mock_code(spec, plan)
+        else:
+            self.check_spend_cap_before_call(job_id)
+            research_text = "\n\n".join(
+                [f"Doc: {d.title}\nSummary: {d.summary}\nKey APIs: {', '.join(d.key_apis)}" for d in research_docs]
+            )
+            non_test_files = [f.path for f in plan.files if not f.is_test]
+            user_prompt = (
+                f"Generate implementation for files: {', '.join(non_test_files)}\n"
+                f"Architecture: {plan.architecture_summary}\n"
+                f"Tech stack: {', '.join(plan.tech_stack)}\n"
+                f"Research Notes:\n{research_text}"
+            )
 
-        research_text = "\n\n".join(
-            [f"Doc: {d.title}\nSummary: {d.summary}\nKey APIs: {', '.join(d.key_apis)}" for d in research_docs]
-        )
-        non_test_files = [f.path for f in plan.files if not f.is_test]
-        user_prompt = (
-            f"Generate implementation for files: {', '.join(non_test_files)}\n"
-            f"Architecture: {plan.architecture_summary}\n"
-            f"Tech stack: {', '.join(plan.tech_stack)}\n"
-            f"Research Notes:\n{research_text}"
-        )
+            data, reasoning = llm_client.complete_json(
+                system_prompt=SYSTEM_CODER_PROMPT,
+                user_prompt=user_prompt,
+                tier="fast"
+            )
+            files = []
+            for f in (data.get("files", []) if isinstance(data, dict) else []):
+                if isinstance(f, dict) and "path" in f:
+                    content = f.get("content") or f.get("code") or f.get("source") or ""
+                    files.append(GeneratedFile(
+                        path=f["path"],
+                        content=content,
+                        language=f.get("language", "python")
+                    ))
 
-        data, reasoning = llm_client.complete_json(
-            system_prompt=SYSTEM_CODER_PROMPT,
-            user_prompt=user_prompt,
-            tier="fast"
-        )
-        files = []
-        for f in (data.get("files", []) if isinstance(data, dict) else []):
-            if isinstance(f, dict) and "path" in f:
-                content = f.get("content") or f.get("code") or f.get("source") or ""
-                files.append(GeneratedFile(
-                    path=f["path"],
-                    content=content,
-                    language=f.get("language", "python")
-                ))
+        await self.record_llm_spend(job_id, "coding")
         return files
 
     async def _run_tester(
@@ -280,29 +372,32 @@ class AgenticOrchestrator:
         code_files: List[GeneratedFile]
     ) -> List[GeneratedFile]:
         if settings.effective_mock_llm:
-            return self._generate_mock_tests(spec, plan)
+            tests = self._generate_mock_tests(spec, plan)
+        else:
+            self.check_spend_cap_before_call(job_id)
+            code_summary = "\n\n".join([f"File: {f.path}\n```{f.language}\n{f.content}\n```" for f in code_files])
+            user_prompt = (
+                f"Target Test Strategy: {plan.test_strategy}\n"
+                f"Codebase:\n{code_summary}\n"
+                "Generate complete test suites targeting pytest."
+            )
 
-        code_summary = "\n\n".join([f"File: {f.path}\n```{f.language}\n{f.content}\n```" for f in code_files])
-        user_prompt = (
-            f"Target Test Strategy: {plan.test_strategy}\n"
-            f"Codebase:\n{code_summary}\n"
-            "Generate complete test suites targeting pytest."
-        )
+            data, _ = llm_client.complete_json(
+                system_prompt=SYSTEM_TESTER_PROMPT,
+                user_prompt=user_prompt,
+                tier="fast"
+            )
+            tests = []
+            for tf in (data.get("test_files", []) if isinstance(data, dict) else []):
+                if isinstance(tf, dict) and "path" in tf:
+                    content = tf.get("content") or tf.get("code") or tf.get("source") or ""
+                    tests.append(GeneratedFile(
+                        path=tf["path"],
+                        content=content,
+                        language="python"
+                    ))
 
-        data, _ = llm_client.complete_json(
-            system_prompt=SYSTEM_TESTER_PROMPT,
-            user_prompt=user_prompt,
-            tier="fast"
-        )
-        tests = []
-        for tf in (data.get("test_files", []) if isinstance(data, dict) else []):
-            if isinstance(tf, dict) and "path" in tf:
-                content = tf.get("content") or tf.get("code") or tf.get("source") or ""
-                tests.append(GeneratedFile(
-                    path=tf["path"],
-                    content=content,
-                    language="python"
-                ))
+        await self.record_llm_spend(job_id, "testing")
         return tests
 
     async def _run_fixer(
@@ -318,26 +413,53 @@ class AgenticOrchestrator:
             f"Analyzing failure traceback using Nemotron Reasoning Tier (Iteration {iteration})..."
         )
 
+        # 1. Failure classification before fixing
+        job = storage_service.get_job(job_id)
+        current_files = job.files if job else []
+        ws_file_paths = [f.path for f in current_files]
+        diagnosis = classify_failure(error_output, ws_file_paths)
+
+        # 2. Log classification in job events
+        await storage_service.emit_event(
+            job_id, "fixer", "classification",
+            f"Failure classified as [{diagnosis.category.value.upper()}]: {diagnosis.summary} Strategy: {diagnosis.strategy}",
+            diagnosis.model_dump()
+        )
+
         if settings.effective_mock_llm:
-            # Apply targeted fix that resolves the issue
+            await self.record_llm_spend(job_id, "fixing")
             fixed_files = self._get_mock_fix(spec)
             for f in fixed_files:
+                if f.path == "requirements.txt" and not diagnosis.allow_requirements_edit:
+                    continue
                 storage_service.save_file(job_id, f)
                 await storage_service.emit_event(
-                    job_id, "fixer", "action", f"Patched file: {f.path} (fixed edge case / test assertion)"
+                    job_id, "fixer", "action", f"Patched file: {f.path} ({diagnosis.summary})"
                 )
             return
 
-        user_prompt = f"Failed Test Output:\n{error_output}\nPlan:\n{plan.model_dump_json()}"
+        self.check_spend_cap_before_call(job_id)
+        user_prompt = (
+            f"Failed Test Output:\n{error_output}\n\n"
+            f"{diagnosis.guidance_prompt}\n\n"
+            f"Plan:\n{plan.model_dump_json()}"
+        )
         data, reasoning = llm_client.complete_json(
             system_prompt=SYSTEM_FIXER_PROMPT,
             user_prompt=user_prompt,
             tier="reasoning"
         )
+        await self.record_llm_spend(job_id, "fixing")
 
         for ch in (data.get("changes", []) if isinstance(data, dict) else []):
             if isinstance(ch, dict) and "path" in ch:
                 path = ch["path"]
+                if path == "requirements.txt" and not diagnosis.allow_requirements_edit:
+                    await storage_service.emit_event(
+                        job_id, "fixer", "log",
+                        f"Blocked invalid modification to requirements.txt (failure is {diagnosis.category.value}, not an external dependency)."
+                    )
+                    continue
                 content = ch.get("content") or ch.get("code") or ch.get("source") or ""
                 storage_service.save_file(job_id, GeneratedFile(path=path, content=content, language="python"))
                 await storage_service.emit_event(
@@ -395,6 +517,12 @@ pytest -v
 ```
 {chr(10).join([f'├── {f.path} - {f.purpose}' for f in plan.files])}
 ```
+
+## 💰 Nebius Token Factory Spend Summary
+- **Estimated Total Spend**: `${(storage_service.get_job(job_id).spend.total_cost_usd if storage_service.get_job(job_id) and storage_service.get_job(job_id).spend else 0.0):.4f} USD`
+- **Configured Spend Cap**: `${settings.nebius_spend_cap_usd:.2f} USD`
+- **Total Tokens Used**: `{storage_service.get_job(job_id).spend.total_tokens if storage_service.get_job(job_id) and storage_service.get_job(job_id).spend else 0}`
+*(Estimates calculated via published Nebius Token Factory rates)*
 
 ---
 *Created with SpecForge • Verified with NVIDIA Nemotron & Nebius AI Cloud*
@@ -896,6 +1024,7 @@ class DataProcessor:
         if settings.effective_mock_llm:
             summary, modified_files = self._generate_mock_refinement(job.spec, instruction, current_files)
         else:
+            self.check_spend_cap_before_call(job_id)
             files_context = "\n\n".join([f"--- {p} ---\n{c}" for p, c in current_files.items()])
             user_prompt = (
                 f"Target Refinement Instruction: {instruction}\n"
@@ -919,6 +1048,8 @@ class DataProcessor:
                         "content": ch.get("content") or ch.get("code") or "",
                         "explanation": ch.get("explanation", "Updated file"),
                     })
+
+        await self.record_llm_spend(job_id, "coding")
 
         diff_changes: List[DiffChange] = []
         for mf in modified_files:

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     storage_dir: Path = (Path(__file__).resolve().parent.parent / "data").resolve()
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
+    nebius_spend_cap_usd: float = 2.00
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -8,6 +8,7 @@ import { TestReportPanel } from './components/TestReportPanel';
 import { PlanEditorModal } from './components/PlanEditorModal';
 import { PreviewPanel } from './components/PreviewPanel';
 import { RefineBox } from './components/RefineBox';
+import { SettingsModal } from './components/SettingsModal';
 import {
   ProjectType,
   JobDetail,
@@ -15,6 +16,7 @@ import {
   HealthInfo,
   AgentEvent,
   Plan,
+  SettingsInfo,
 } from './types';
 import {
   fetchHealth,
@@ -26,6 +28,7 @@ import {
   updateFile,
   retestJob,
   refineJob,
+  fetchSettings,
 } from './api';
 import {
   Download,
@@ -67,6 +70,8 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'files' | 'preview' | 'tests'>('preview');
   const [isRetesting, setIsRetesting] = useState<boolean>(false);
   const [isRefining, setIsRefining] = useState<boolean>(false);
+  const [settings, setSettings] = useState<SettingsInfo | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const handleLoadSample = () => {
     setPrompt(SAMPLE_FASTMCP_SPEC.prompt);
@@ -74,11 +79,15 @@ export const App: React.FC = () => {
     setEnableResearch(true);
   };
 
-  // Load initial health and examples
+  // Load initial health, settings and examples
   useEffect(() => {
     fetchHealth()
       .then(setHealth)
       .catch((err) => console.error('Failed to load health:', err));
+
+    fetchSettings()
+      .then(setSettings)
+      .catch((err) => console.error('Failed to load settings:', err));
 
     fetchExamples()
       .then((data) => {
@@ -229,7 +238,12 @@ export const App: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header health={health} />
+      <Header
+        health={health}
+        currentJob={currentJob}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        settings={settings}
+      />
 
       <main
         style={{
@@ -433,6 +447,21 @@ export const App: React.FC = () => {
                   >
                     {currentJob.latest_test ? `${currentJob.latest_test.passed_tests}/${currentJob.latest_test.total_tests} assertions passed` : 'tests passed'}
                   </span>
+                  {currentJob.spend && (
+                    <span
+                      className="badge"
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: '#38bdf8',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Cost: ${currentJob.spend.total_cost_usd.toFixed(4)} ({currentJob.spend.total_tokens.toLocaleString()} tokens)
+                    </span>
+                  )}
                 </div>
 
                 <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>
@@ -465,6 +494,100 @@ export const App: React.FC = () => {
                 <span>Export ZIP</span>
               </a>
             )}
+          </div>
+        )}
+
+        {/* PAUSED Spend Cap Exceeded Banner */}
+        {currentJob && currentJob.status === 'paused' && (
+          <div
+            className="glass-panel"
+            style={{
+              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(24, 20, 10, 0.95) 100%)',
+              border: '1.5px solid #eab308',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.25rem 1.75rem',
+              marginBottom: '1.75rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              boxShadow: '0 0 32px rgba(234, 179, 8, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div
+                style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(234, 179, 8, 0.2)',
+                  border: '1px solid #eab308',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 16px rgba(234, 179, 8, 0.4)',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertCircle size={26} color="#facc15" />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: '#facc15',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    PIPELINE PAUSED: SPEND CAP REACHED
+                  </span>
+                  {currentJob.spend && (
+                    <span
+                      className="badge"
+                      style={{
+                        background: 'rgba(234, 179, 8, 0.2)',
+                        border: '1px solid #eab308',
+                        color: '#fef08a',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      ${currentJob.spend.total_cost_usd.toFixed(4)} spent / ${currentJob.spend.spend_cap_usd.toFixed(2)} cap
+                    </span>
+                  )}
+                </div>
+
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                  The job stopped calling Nebius LLMs to protect your budget. You can inspect existing code, adjust the spend cap in Settings, or re-run.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 1.25rem',
+                borderRadius: 'var(--radius-sm)',
+                background: '#ca8a04',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                fontFamily: 'var(--font-mono)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Adjust Spend Cap
+            </button>
           </div>
         )}
 
@@ -646,6 +769,7 @@ export const App: React.FC = () => {
               <TestReportPanel
                 testHistory={currentJob.test_history}
                 latestTest={currentJob.latest_test}
+                spend={currentJob?.spend}
               />
             )}
           </div>
@@ -661,6 +785,17 @@ export const App: React.FC = () => {
           isApprovalRequired={currentJob.status === 'awaiting_plan_approval'}
         />
       )}
+
+      {/* BYOK & Cost Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSettingsUpdated={(updated) => {
+          setSettings(updated);
+          fetchHealth().then(setHealth).catch(console.error);
+        }}
+      />
 
       {/* Forge Footer */}
       <footer

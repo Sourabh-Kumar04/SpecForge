@@ -18,6 +18,7 @@ from backend.models.schemas import (
     TestResult,
     AgentEvent,
     RefineResult,
+    JobSpend,
 )
 
 class StorageService:
@@ -52,7 +53,8 @@ class StorageService:
                     error TEXT,
                     workspace_dir TEXT,
                     spec_json TEXT,
-                    refinements_json TEXT
+                    refinements_json TEXT,
+                    spend_json TEXT
                 )
             """)
             # Schema migration for existing sqlite db
@@ -62,6 +64,8 @@ class StorageService:
                 conn.execute("ALTER TABLE jobs ADD COLUMN spec_json TEXT")
             if "refinements_json" not in cols:
                 conn.execute("ALTER TABLE jobs ADD COLUMN refinements_json TEXT")
+            if "spend_json" not in cols:
+                conn.execute("ALTER TABLE jobs ADD COLUMN spend_json TEXT")
 
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS files (
@@ -108,12 +112,13 @@ class StorageService:
     def create_job(self, job_id: str, spec: SpecInput) -> JobDetail:
         now = datetime.now(timezone.utc).isoformat()
         workspace = self.get_job_workspace(job_id)
+        default_spend = JobSpend(spend_cap_usd=settings.nebius_spend_cap_usd)
 
         with self._get_connection() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (job_id, prompt, project_type, status, created_at, updated_at, workspace_dir, spec_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (job_id, prompt, project_type, status, created_at, updated_at, workspace_dir, spec_json, spend_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_id) DO UPDATE SET
                     prompt = excluded.prompt,
                     project_type = excluded.project_type,
@@ -121,7 +126,8 @@ class StorageService:
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at,
                     workspace_dir = excluded.workspace_dir,
-                    spec_json = excluded.spec_json
+                    spec_json = excluded.spec_json,
+                    spend_json = excluded.spend_json
                 """,
                 (
                     job_id,
@@ -132,6 +138,7 @@ class StorageService:
                     now,
                     str(workspace),
                     spec.model_dump_json(),
+                    default_spend.model_dump_json(),
                 ),
             )
             conn.commit()
@@ -143,6 +150,7 @@ class StorageService:
             created_at=now,
             updated_at=now,
             workspace_dir=str(workspace),
+            spend=default_spend,
         )
 
     def update_job_status(self, job_id: str, status: JobStatus, error: Optional[str] = None):
@@ -229,6 +237,13 @@ class StorageService:
             conn.execute(
                 "UPDATE jobs SET refinements_json = ?, updated_at = ? WHERE job_id = ?",
                 (json.dumps(current), now, job_id),
+            )
+    def save_spend(self, job_id: str, spend: JobSpend):
+        now = datetime.now(timezone.utc).isoformat()
+        with self._get_connection() as conn:
+            conn.execute(
+                "UPDATE jobs SET spend_json = ?, updated_at = ? WHERE job_id = ?",
+                (spend.model_dump_json(), now, job_id),
             )
             conn.commit()
 
@@ -341,6 +356,14 @@ class StorageService:
                 except Exception:
                     refinements = []
 
+            if "spend_json" in row.keys() and row["spend_json"]:
+                try:
+                    spend = JobSpend.model_validate_json(row["spend_json"])
+                except Exception:
+                    spend = JobSpend(spend_cap_usd=settings.nebius_spend_cap_usd)
+            else:
+                spend = JobSpend(spend_cap_usd=settings.nebius_spend_cap_usd)
+
             return JobDetail(
                 job_id=job_id,
                 spec=spec,
@@ -357,6 +380,7 @@ class StorageService:
                 download_url=download_url,
                 workspace_dir=row["workspace_dir"],
                 refinements=refinements,
+                spend=spend,
             )
 
     def list_jobs(self, limit: int = 20) -> List[Dict[str, Any]]:
