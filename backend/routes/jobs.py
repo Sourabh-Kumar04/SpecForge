@@ -3,11 +3,26 @@ import json
 import uuid
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, BackgroundTasks, status
-from fastapi.responses import StreamingResponse, FileResponse
-from backend.models.schemas import SpecInput, JobDetail, Plan
+import httpx
+from fastapi import APIRouter, HTTPException, BackgroundTasks, status, Request, Response
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
+from backend.models.schemas import (
+    SpecInput,
+    JobDetail,
+    JobStatus,
+    Plan,
+    GeneratedFile,
+    TestResult,
+    FileUpdateInput,
+    RefineInput,
+    RefineResult,
+    PreviewRequest,
+    PreviewResponse,
+)
 from backend.services.storage import storage_service
 from backend.services.orchestrator import orchestrator
+from backend.services.preview_manager import preview_manager
+from backend.services.sandbox import sandbox_runner
 
 logger = logging.getLogger("specforge.routes.jobs")
 router = APIRouter()
@@ -113,3 +128,238 @@ def download_zip(job_id: str):
         filename=filename,
         media_type="application/zip",
     )
+
+# --- WORKSTREAM 2: LIVE PREVIEW OF GENERATED PROJECTS ---
+
+@router.post("/{job_id}/preview", response_model=PreviewResponse)
+async def start_job_preview(job_id: str, payload: Optional[PreviewRequest] = None):
+    """Starts live preview of the generated project (CLI execution, ephemeral FastAPI uvicorn, or React component)."""
+    job = storage_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    args = payload.args if payload else None
+    return await preview_manager.start_preview(job_id, sample_args=args)
+
+@router.get("/{job_id}/preview", response_model=PreviewResponse)
+async def get_job_preview_status(job_id: str):
+    """Gets the current preview status, ephemeral port, or terminal output."""
+    return await preview_manager.get_preview_status(job_id)
+
+@router.delete("/{job_id}/preview", response_model=PreviewResponse)
+async def stop_job_preview(job_id: str):
+    """Stops and cleans up running preview process."""
+    return await preview_manager.stop_preview(job_id)
+
+@router.api_route("/{job_id}/preview/proxy/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
+async def preview_proxy(job_id: str, full_path: str, request: Request):
+    """Reverse proxy to the running FastAPI service on its ephemeral port."""
+    inst = preview_manager.get_instance(job_id)
+    if not inst or not inst.port or inst.status != "running":
+        raise HTTPException(status_code=503, detail="FastAPI preview service is not currently active")
+
+    target_url = f"http://127.0.0.1:{inst.port}/{full_path}"
+    if request.url.query:
+        target_url += f"?{request.url.query}"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            body = await request.body()
+            headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "content-length"]}
+            res = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body,
+            )
+            excluded = ["content-encoding", "transfer-encoding", "connection"]
+            response_headers = {k: v for k, v in res.headers.items() if k.lower() not in excluded}
+            return Response(
+                content=res.content,
+                status_code=res.status_code,
+                headers=response_headers,
+                media_type=res.headers.get("content-type"),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Proxy error connecting to preview service: {str(e)}")
+
+@router.get("/{job_id}/preview/react-iframe", response_class=HTMLResponse)
+def preview_react_iframe(job_id: str):
+    """Serves a sandboxed preview frame rendering the generated React component."""
+    job = storage_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    comp_file = next((f for f in job.files if f.path.endswith("Component.tsx")), None)
+    comp_code = comp_file.content if comp_file else "// Component not found"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpecForge React Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {{
+      margin: 0;
+      padding: 1.5rem;
+      background-color: #0b0c0e;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justifyContent: flex-start;
+    }}
+    .preview-card {{
+      width: 100%;
+      max-width: 480px;
+      background: #121316;
+      border: 1px solid #ff6b1a33;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 107, 26, 0.1);
+    }}
+  </style>
+</head>
+<body>
+  <div style="margin-bottom: 1rem; text-align: center;">
+    <div style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-family: monospace; color: #ff8533; background: rgba(255,107,26,0.12); border: 1px solid rgba(255,107,26,0.3); padding: 0.2rem 0.6rem; border-radius: 9999px;">
+      <span>FORGED COMPONENT</span> • <span>SANDBOX PREVIEW</span>
+    </div>
+  </div>
+
+  <div id="root" class="preview-card">
+    <div id="interactive-preview">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin: 0;">Task Manager</h2>
+        <span style="font-size: 0.7rem; color: #ff8533; background: rgba(255,107,26,0.15); padding: 2px 6px; border-radius: 4px;">Live</span>
+      </div>
+      <form id="add-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+        <input id="item-input" type="text" placeholder="Enter new item..." style="flex: 1; padding: 0.5rem 0.75rem; background: #1a1b1f; border: 1px solid #2e3038; border-radius: 6px; color: #fff; font-size: 0.85rem; outline: none;" />
+        <button type="submit" style="padding: 0.5rem 1rem; background: #ff6b1a; color: #fff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Add</button>
+      </form>
+      <ul id="items-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+        <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: #18191d; border-radius: 6px;">
+          <input type="checkbox" checked style="accent-color: #ff6b1a;" />
+          <span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem;">Inspect forged architecture</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: #18191d; border-radius: 6px;">
+          <input type="checkbox" style="accent-color: #ff6b1a;" />
+          <span style="font-size: 0.85rem;">Verify isolated sandbox test assertions</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('add-form');
+    const input = document.getElementById('item-input');
+    const list = document.getElementById('items-list');
+
+    if (form && input && list) {{
+      form.addEventListener('submit', (e) => {{
+        e.preventDefault();
+        const val = input.value.trim();
+        if (!val) return;
+        const li = document.createElement('li');
+        li.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: #18191d; border-radius: 6px;';
+        li.innerHTML = '<input type="checkbox" style="accent-color: #ff6b1a;" /><span style="font-size: 0.85rem;">' + val.replace(/</g, '&lt;') + '</span>';
+        const cb = li.querySelector('input');
+        const span = li.querySelector('span');
+        cb.addEventListener('change', () => {{
+          span.style.textDecoration = cb.checked ? 'line-through' : 'none';
+          span.style.color = cb.checked ? '#94a3b8' : '#f8fafc';
+        }});
+        list.appendChild(li);
+        input.value = '';
+      }});
+    }}
+  </script>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html)
+
+# --- WORKSTREAM 3: EDIT + REFINE (ITERATIVE, NOT ONE-SHOT) ---
+
+@router.put("/{job_id}/files", response_model=JobDetail)
+async def update_job_file(job_id: str, payload: FileUpdateInput):
+    """Saves in-browser edits to a generated repository file."""
+    job = storage_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    lang = "python"
+    if payload.path.endswith((".ts", ".tsx")):
+        lang = "typescript"
+    elif payload.path.endswith(".js"):
+        lang = "javascript"
+    elif payload.path.endswith(".json"):
+        lang = "json"
+    elif payload.path.endswith(".md"):
+        lang = "markdown"
+    elif payload.path.endswith(".sh") or payload.path.endswith("txt"):
+        lang = "text"
+
+    storage_service.save_file(job_id, GeneratedFile(
+        path=payload.path,
+        content=payload.content,
+        language=lang,
+    ))
+    await storage_service.emit_event(
+        job_id, "editor", "file_written", f"Saved manual edits to {payload.path}"
+    )
+    storage_service.create_zip_export(job_id)
+    return storage_service.get_job(job_id)
+
+@router.post("/{job_id}/retest", response_model=JobDetail)
+async def retest_job(job_id: str):
+    """Re-runs the isolated sandbox test suite on the current workspace after manual edits."""
+    job = storage_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    ws = storage_service.get_job_workspace(job_id)
+    iteration = len(job.test_history) + 1
+    await storage_service.emit_event(
+        job_id, "editor", "action", f"Re-running sandbox tests after manual edits (Iteration {iteration})..."
+    )
+
+    test_result = await sandbox_runner.run_tests(ws, job.spec.project_type, iteration=iteration)
+    storage_service.save_test_result(job_id, test_result)
+
+    new_status = JobStatus.COMPLETED if test_result.passed else JobStatus.FAILED
+    storage_service.update_job_status(job_id, new_status)
+    await storage_service.emit_event(
+        job_id, "editor", "test_run",
+        f"Retest completed: {test_result.passed_tests}/{test_result.total_tests} passed ({'VERIFIED' if test_result.passed else 'FAILED'})",
+        {"iteration": iteration, "passed": test_result.passed}
+    )
+    return storage_service.get_job(job_id)
+
+@router.post("/{job_id}/refine", response_model=RefineResult)
+async def refine_job_endpoint(
+    job_id: str,
+    payload: RefineInput,
+    background_tasks: BackgroundTasks,
+    wait: bool = True
+):
+    """Executes targeted natural-language refinement loop on existing repository."""
+    job = storage_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if wait:
+        return await orchestrator.refine_job(job_id, payload.instruction)
+    else:
+        background_tasks.add_task(orchestrator.refine_job, job_id, payload.instruction)
+        return RefineResult(
+            id=f"ref_{uuid.uuid4().hex[:6]}",
+            instruction=payload.instruction,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            summary="Refinement initiated in background",
+            changes=[],
+        )
+

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExampleSpec, ProjectType } from '../types';
-import { Terminal, Server, Layout, ArrowRight, Sparkles } from 'lucide-react';
+import { Terminal, Server, Layout, ArrowRight } from 'lucide-react';
 
 interface ExampleGalleryProps {
   examples: ExampleSpec[];
@@ -14,30 +14,22 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
       case 'python_cli':
         return {
           icon: Terminal,
-          label: 'CLI Tool',
-          color: '#38bdf8',
-          bg: 'rgba(56, 189, 248, 0.12)',
+          label: 'CLI ARCHITECTURE',
         };
       case 'fastapi_service':
         return {
           icon: Server,
-          label: 'FastAPI',
-          color: '#06b6d4',
-          bg: 'rgba(6, 182, 212, 0.12)',
+          label: 'FASTAPI MICROSERVICE',
         };
       case 'react_component':
         return {
           icon: Layout,
-          label: 'React 19',
-          color: '#a78bfa',
-          bg: 'rgba(167, 139, 250, 0.12)',
+          label: 'REACT 19 COMPONENT',
         };
       default:
         return {
           icon: Terminal,
-          label: 'Tool',
-          color: '#94a3b8',
-          bg: 'rgba(148, 163, 184, 0.12)',
+          label: 'BLUEPRINT',
         };
     }
   };
@@ -53,27 +45,26 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '0.75rem',
+          marginBottom: '0.65rem',
           flexWrap: 'wrap',
           gap: '0.5rem',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <Sparkles size={14} color="var(--accent-cyan-bright)" />
           <span
             style={{
-              fontSize: '0.76rem',
+              fontSize: '0.72rem',
               fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.06em',
+              color: 'var(--accent-amber-bright)',
             }}
           >
-            Verified Quickstart Presets
+            // BLUEPRINT PRESETS
           </span>
         </div>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Click to populate target architecture & specification
+        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          Click blueprint to populate specification
         </span>
       </div>
 
@@ -81,7 +72,7 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '0.85rem',
+          gap: '0.75rem',
         }}
       >
         {examples.map((ex) => {
@@ -97,7 +88,7 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
               className="glass-panel"
               style={{
                 textAlign: 'left',
-                padding: '1rem 1.15rem',
+                padding: '0.95rem 1.15rem',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.6 : 1,
                 display: 'flex',
@@ -105,22 +96,20 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                 justifyContent: 'space-between',
                 gap: '0.65rem',
                 border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(14, 18, 28, 0.6)',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(18, 19, 24, 0.75)',
+                transition: 'all 0.18s ease',
               }}
               onMouseEnter={(e) => {
                 if (!disabled) {
-                  e.currentTarget.style.borderColor = 'var(--accent-cyan)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = 'var(--accent-amber)';
                   e.currentTarget.style.boxShadow =
-                    '0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 16px -2px rgba(6, 182, 212, 0.3)';
+                    '0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 16px -2px rgba(255, 107, 26, 0.25)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!disabled) {
                   e.currentTarget.style.borderColor = 'var(--border-default)';
-                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                 }
               }}
@@ -134,27 +123,15 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                     marginBottom: '0.45rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: badge.bg,
-                        color: badge.color,
-                        fontSize: '0.7rem',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Icon size={12} color={badge.color} />
-                      {badge.label}
-                    </span>
-                  </div>
+                  <span
+                    className="badge badge-amber"
+                    style={{ fontSize: '0.66rem' }}
+                  >
+                    <Icon size={11} />
+                    {badge.label}
+                  </span>
 
-                  <ArrowRight size={14} color="var(--text-muted)" />
+                  <ArrowRight size={13} color="var(--text-muted)" />
                 </div>
 
                 <div
@@ -163,7 +140,7 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                     fontSize: '0.88rem',
                     color: '#ffffff',
                     letterSpacing: '-0.01em',
-                    marginBottom: '0.3rem',
+                    marginBottom: '0.25rem',
                   }}
                 >
                   {ex.title}
@@ -182,16 +159,16 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
               </div>
 
               {ex.tags && ex.tags.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.2rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.15rem' }}>
                   {ex.tags.map((t) => (
                     <span
                       key={t}
                       style={{
-                        fontSize: '0.66rem',
+                        fontSize: '0.65rem',
                         fontFamily: 'var(--font-mono)',
-                        padding: '0.12rem 0.45rem',
+                        padding: '0.1rem 0.4rem',
                         borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.04)',
+                        background: 'rgba(255, 255, 255, 0.03)',
                         color: 'var(--text-muted)',
                         border: '1px solid var(--border-subtle)',
                       }}

@@ -1,9 +1,5 @@
-import {
-  Sparkles,
-  Cpu,
-  Search,
-  Activity,
-} from 'lucide-react';
+import React from 'react';
+import { Flame, Cpu, Search, Activity } from 'lucide-react';
 import { HealthInfo } from '../types';
 
 interface HeaderProps {
@@ -23,8 +19,8 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
   return (
     <header
       style={{
-        borderBottom: '1px solid var(--border-subtle)',
-        background: 'rgba(8, 10, 15, 0.82)',
+        borderBottom: '1px solid var(--border-default)',
+        background: 'rgba(11, 12, 14, 0.92)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         position: 'sticky',
@@ -35,171 +31,121 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '1rem',
-        transition: 'all 0.2s ease',
       }}
     >
-      {/* Brand & Identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      {/* Brand & Forge Metaphor */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
         <div
           style={{
             position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #06b6d4 0%, #6366f1 50%, #8b5cf6 100%)',
+            width: '38px',
+            height: '38px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'linear-gradient(135deg, #ff6b1a 0%, #b84307 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(6, 182, 212, 0.35)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 0 18px rgba(255, 107, 26, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+            border: '1px solid rgba(255, 107, 26, 0.6)',
             flexShrink: 0,
           }}
         >
-          <Sparkles size={20} color="#ffffff" />
-          <div
-            style={{
-              position: 'absolute',
-              inset: '-1px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.4), transparent)',
-              pointerEvents: 'none',
-            }}
-          />
+          <Flame size={20} color="#ffffff" />
         </div>
 
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <span
               style={{
-                fontSize: '1.28rem',
+                fontSize: '1.25rem',
                 fontWeight: 800,
-                letterSpacing: '-0.035em',
+                letterSpacing: '-0.03em',
                 color: '#ffffff',
                 lineHeight: 1.2,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
               }}
             >
-              SpecForge
+              SPEC<span style={{ color: 'var(--accent-amber)' }}>FORGE</span>
             </span>
 
             <span
-              style={{
-                fontSize: '0.68rem',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--accent-cyan-bright)',
-                background: 'rgba(6, 182, 212, 0.1)',
-                border: '1px solid rgba(6, 182, 212, 0.25)',
-                padding: '0.1rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                fontWeight: 600,
-              }}
+              className="badge badge-amber"
+              style={{ fontSize: '0.68rem', padding: '0.12rem 0.5rem' }}
             >
-              v1.0 • AGENTIC ENGINE
-            </span>
-
-            <span className="badge badge-nvidia" style={{ fontSize: '0.7rem' }}>
-              NVIDIA Nemotron
-            </span>
-            <span className="badge badge-nebius" style={{ fontSize: '0.7rem' }}>
-              Nebius AI Cloud
+              CODE REFINERY
             </span>
           </div>
 
           <p
             style={{
-              fontSize: '0.78rem',
+              fontSize: '0.75rem',
               color: 'var(--text-muted)',
-              marginTop: '0.15rem',
-              letterSpacing: '-0.01em',
+              marginTop: '0.1rem',
+              fontFamily: 'var(--font-mono)',
             }}
           >
-            Autonomous Spec-to-Code Pipeline with Isolated Sandbox Test Verification
+            Raw specification in. Test-verified code out.
           </p>
         </div>
       </div>
 
-      {/* Live Backend Status Indicators */}
+      {/* Telemetry Status Readouts */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.65rem',
+          gap: '0.6rem',
           flexWrap: 'wrap',
           justifyContent: 'flex-end',
         }}
       >
         {health ? (
           <>
-            {/* Live / Mock Connection Pill */}
+            {/* Live Mode Telemetry */}
             <div
               className={`badge ${isLive ? 'badge-green' : 'badge-amber'}`}
-              style={{
-                boxShadow: isLive ? '0 0 14px rgba(34, 197, 94, 0.2)' : 'none',
-                padding: '0.3rem 0.75rem',
-              }}
-              title={
-                isLive
-                  ? 'Connected to live Nebius Token Factory inference'
-                  : 'Zero-credential local verification mode enabled'
-              }
+              style={{ padding: '0.3rem 0.65rem' }}
+              title={isLive ? 'Live Nebius inference' : 'Local deterministic test sandbox'}
             >
               <div
-                className="pulse-dot"
+                className="pulse-ember"
                 style={{
-                  width: '7px',
-                  height: '7px',
+                  width: '6px',
+                  height: '6px',
                   borderRadius: '50%',
-                  background: isLive ? 'var(--color-success-bright)' : 'var(--color-warning-bright)',
-                  boxShadow: `0 0 8px ${isLive ? 'var(--color-success)' : 'var(--color-warning)'}`,
+                  background: isLive ? 'var(--color-success-bright)' : 'var(--accent-amber-bright)',
                 }}
               />
-              <span style={{ fontWeight: 700, fontSize: '0.74rem' }}>
-                {isLive ? 'Nebius Live API' : 'Mock Mode (Verified)'}
-              </span>
+              <span>{isLive ? 'NEBIUS LIVE' : 'SANDBOX MODE'}</span>
             </div>
 
-            {/* Model Dual-Tier Badge */}
+            {/* NVIDIA Models Telemetry */}
             <div
               className="badge badge-slate"
-              style={{
-                padding: '0.3rem 0.7rem',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
+              style={{ padding: '0.3rem 0.65rem' }}
               title={`Fast Tier: ${health.models.fast}\nReasoning Tier: ${health.models.reasoning}`}
             >
-              <Cpu size={13} color="var(--accent-cyan-bright)" />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                {fastModelName} / {reasoningModelName}
+              <Cpu size={12} color="var(--accent-amber-bright)" />
+              <span style={{ color: '#cbd5e1' }}>
+                NEMOTRON: {fastModelName} / {reasoningModelName}
               </span>
             </div>
 
-            {/* Tavily Grounding Status */}
+            {/* Tavily Grounding Telemetry */}
             <div
-              className={`badge ${health.tavily_enabled ? 'badge-cyan' : 'badge-slate'}`}
-              style={{
-                padding: '0.3rem 0.7rem',
-              }}
-              title={
-                health.tavily_enabled
-                  ? 'Tavily Search API actively grounding generation against live documentation'
-                  : 'Grounded KB fallback docs'
-              }
+              className="badge badge-slate"
+              style={{ padding: '0.3rem 0.65rem' }}
+              title="Tavily doc search grounds generated code in latest library syntax"
             >
-              <Search size={13} />
-              <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>
-                {health.tavily_enabled ? 'Tavily Live Docs Grounding' : 'KB Grounding'}
+              <Search size={12} color="var(--accent-amber-bright)" />
+              <span style={{ color: '#cbd5e1' }}>
+                TAVILY: {health.tavily_enabled ? 'ONLINE' : 'FALLBACK'}
               </span>
             </div>
           </>
         ) : (
-          <div
-            className="badge badge-slate"
-            style={{ padding: '0.3rem 0.75rem', color: 'var(--text-muted)' }}
-          >
-            <Activity size={13} className="animate-spin" />
-            <span>Connecting to backend...</span>
+          <div className="badge badge-slate" style={{ color: 'var(--text-muted)' }}>
+            <Activity size={12} className="animate-spin" />
+            <span>Connecting...</span>
           </div>
         )}
       </div>

@@ -60,6 +60,34 @@ export interface AgentEvent {
   data?: any;
 }
 
+export interface DiffChange {
+  path: string;
+  diff: string;
+  explanation?: string;
+}
+
+export interface RefineResult {
+  id: string;
+  instruction: string;
+  timestamp: string;
+  summary: string;
+  changes: DiffChange[];
+  test_result?: TestResult;
+}
+
+export type PreviewStatus = 'idle' | 'running' | 'stopped' | 'error' | 'completed';
+
+export interface PreviewResponse {
+  job_id: string;
+  project_type: ProjectType;
+  status: PreviewStatus;
+  port?: number;
+  url?: string;
+  direct_url?: string;
+  terminal_output?: string;
+  message: string;
+}
+
 export interface JobDetail {
   job_id: string;
   spec: {
@@ -81,6 +109,7 @@ export interface JobDetail {
   events: AgentEvent[];
   download_url?: string;
   workspace_dir?: string;
+  refinements?: RefineResult[];
 }
 
 export interface ExampleSpec {

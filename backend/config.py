@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     max_fix_iterations: int = 5
     sandbox_timeout_seconds: int = 35
     docker_sandbox_enabled: bool = True
-    storage_dir: Path = Path("./data")
+    storage_dir: Path = (Path(__file__).resolve().parent.parent / "data").resolve()
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
 

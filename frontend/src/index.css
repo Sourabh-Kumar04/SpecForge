@@ -1,21 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Color Palette - Dark Premium Developer Tool (Linear/Vercel inspired) */
-  --bg-base: #08090d;
-  --bg-surface: #0e111a;
-  --bg-surface-elevated: #141824;
-  --bg-surface-glass: rgba(14, 18, 28, 0.75);
-  --bg-card: #101420;
-  --bg-card-hover: #151b2b;
-  --bg-card-subtle: #0a0d16;
-  --bg-input: #07090f;
+  /* FORGE METAPHOR IDENTITY: Charcoal Iron Base & Molten Amber Accent */
+  --bg-base: #0b0c0e;
+  --bg-surface: #121317;
+  --bg-surface-elevated: #17181e;
+  --bg-surface-glass: rgba(18, 19, 23, 0.88);
+  --bg-card: #131419;
+  --bg-card-hover: #191b22;
+  --bg-card-subtle: #0e0f13;
+  --bg-input: #090a0d;
 
-  /* Borders */
+  /* Industrial Borders */
   --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-default: rgba(148, 163, 184, 0.14);
-  --border-hover: rgba(56, 189, 248, 0.35);
-  --border-focus: #06b6d4;
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-amber: rgba(255, 107, 26, 0.35);
+  --border-hover: rgba(255, 107, 26, 0.5);
+  --border-focus: #ff6b1a;
 
   /* Typography */
   --text-primary: #f8fafc;
@@ -23,16 +24,15 @@
   --text-muted: #64748b;
   --text-dim: #475569;
 
-  /* Signature Electric Accent: Cyan / Violet Duo */
-  --accent-cyan: #06b6d4;
-  --accent-cyan-bright: #38bdf8;
-  --accent-cyan-glow: rgba(6, 182, 212, 0.35);
-  --accent-violet: #8b5cf6;
-  --accent-violet-bright: #a78bfa;
-  --accent-violet-glow: rgba(139, 92, 246, 0.3);
-  --accent-indigo: #6366f1;
+  /* SINGLE Signature Accent: Molten Amber / Orange (#ff6b1a) */
+  --accent-amber: #ff6b1a;
+  --accent-amber-bright: #ff8533;
+  --accent-amber-light: #ffa366;
+  --accent-amber-glow: rgba(255, 107, 26, 0.35);
+  --accent-amber-subtle: rgba(255, 107, 26, 0.12);
+  --accent-amber-muted: rgba(255, 107, 26, 0.06);
 
-  /* Status Colors */
+  /* Verification Green */
   --color-success: #22c55e;
   --color-success-bright: #4ade80;
   --color-success-glow: rgba(34, 197, 94, 0.3);
@@ -41,27 +41,21 @@
   --color-error: #ef4444;
   --color-error-bright: #f87171;
 
-  /* NVIDIA & Hackathon theme accents */
-  --nvidia-green: #76b900;
-  --nvidia-green-bright: #84cc16;
-  --nvidia-glow: rgba(118, 185, 0, 0.25);
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
-  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-subtle);
-  --shadow-glow-cyan: 0 0 24px -2px var(--accent-cyan-glow);
-  --shadow-glow-green: 0 0 28px -2px var(--color-success-glow);
-
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  /* Radii & Shadows */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-subtle);
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
+  --shadow-glow-amber: 0 0 24px -2px var(--accent-amber-glow);
+  --shadow-glow-green: 0 0 24px -2px var(--color-success-glow);
+
   /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -87,19 +81,21 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  /* Molten ember atmospheric glow at top */
   background-image:
-    radial-gradient(ellipse 90% 45% at 50% -10%, rgba(56, 189, 248, 0.12), transparent 70%),
-    radial-gradient(circle 800px at 90% 20%, rgba(139, 92, 246, 0.07), transparent 60%),
-    radial-gradient(circle 700px at 10% 70%, rgba(6, 182, 212, 0.05), transparent 60%);
+    radial-gradient(ellipse 90% 40% at 50% -5%, rgba(255, 107, 26, 0.12), transparent 70%),
+    radial-gradient(circle 600px at 85% 15%, rgba(255, 107, 26, 0.04), transparent 60%);
   background-attachment: fixed;
 }
 
-/* Background mesh dot overlay */
+/* Blueprint grid texture overlay */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 24px 24px;
   pointer-events: none;
   z-index: 0;
@@ -110,11 +106,11 @@ body::before {
   z-index: 1;
 }
 
-code, pre, kbd {
+code, pre, kbd, .font-mono {
   font-family: var(--font-mono);
 }
 
-/* Custom Scrollbars */
+/* Precision Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -123,98 +119,90 @@ code, pre, kbd {
   background: var(--bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2638;
-  border-radius: var(--radius-full);
+  background: #252833;
+  border-radius: var(--radius-sm);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2f3b54;
+  background: var(--accent-amber);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(6, 182, 212, 0.35);
+  background: rgba(255, 107, 26, 0.35);
   color: #ffffff;
 }
 
-/* Common Reusable Glass Panels */
+/* Reusable Forge Panels */
 .glass-panel {
   background: var(--bg-surface-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-panel:hover {
-  border-color: rgba(148, 163, 184, 0.22);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-/* Badges & Micro-Pills */
+/* Precision Industrial Forge Badges */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.38rem;
+  gap: 0.35rem;
   font-size: 0.72rem;
   font-weight: 600;
+  font-family: var(--font-mono);
   letter-spacing: 0.02em;
-  padding: 0.22rem 0.65rem;
-  border-radius: var(--radius-full);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   line-height: 1.2;
   white-space: nowrap;
 }
 
-.badge-cyan {
-  background: rgba(6, 182, 212, 0.12);
-  color: var(--accent-cyan-bright);
-  border-color: rgba(6, 182, 212, 0.3);
-}
-
-.badge-violet {
-  background: rgba(139, 92, 246, 0.12);
-  color: var(--accent-violet-bright);
-  border-color: rgba(139, 92, 246, 0.3);
+.badge-amber {
+  background: rgba(255, 107, 26, 0.12);
+  color: var(--accent-amber-bright);
+  border-color: rgba(255, 107, 26, 0.35);
 }
 
 .badge-green {
-  background: rgba(34, 197, 94, 0.14);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--color-success-bright);
-  border-color: rgba(34, 197, 94, 0.32);
-}
-
-.badge-amber {
-  background: rgba(245, 158, 11, 0.14);
-  color: var(--color-warning-bright);
-  border-color: rgba(245, 158, 11, 0.32);
+  border-color: rgba(34, 197, 94, 0.35);
 }
 
 .badge-red {
-  background: rgba(239, 68, 68, 0.14);
+  background: rgba(239, 68, 68, 0.12);
   color: var(--color-error-bright);
-  border-color: rgba(239, 68, 68, 0.32);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .badge-slate {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(25, 27, 34, 0.8);
   color: var(--text-secondary);
-  border-color: rgba(51, 65, 85, 0.7);
+  border-color: var(--border-default);
 }
 
-.badge-nvidia {
-  background: rgba(118, 185, 0, 0.12);
-  color: var(--nvidia-green-bright);
-  border-color: rgba(118, 185, 0, 0.32);
+/* Ember pulse & Forge animations */
+@keyframes emberGlow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 107, 26, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 4px rgba(255, 107, 26, 0.2);
+  }
 }
 
-.badge-nebius {
-  background: rgba(6, 182, 212, 0.12);
-  color: var(--accent-cyan-bright);
-  border-color: rgba(6, 182, 212, 0.32);
+.pulse-ember {
+  animation: emberGlow 2.5s ease-in-out infinite;
 }
 
-/* Pulse / Spin Animations */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -223,40 +211,52 @@ code, pre, kbd {
   animation: spin 1s linear infinite;
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(0.96);
-  }
+/* Terminal CRT Styling for Python CLI preview */
+.terminal-window {
+  background: #090a0d;
+  border: 1px solid var(--border-amber);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  color: #e2e8f0;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 107, 26, 0.08);
 }
 
-.pulse-dot {
-  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Precision Button with Molten Glow */
+.btn-forge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #ff6b1a 0%, #e0550c 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+  padding: 0.75rem 1.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 107, 26, 0.4), 0 0 0 1px rgba(255, 107, 26, 0.2);
+  transition: all 0.2s ease;
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.btn-forge:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff7a2e 0%, #f05e13 100%);
+  box-shadow: 0 6px 24px rgba(255, 107, 26, 0.55), 0 0 12px rgba(255, 107, 26, 0.3);
+  transform: translateY(-1px);
 }
 
-.shimmer-active {
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0%, rgba(56, 189, 248, 0.18) 50%, rgba(6, 182, 212, 0.05) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2.5s infinite;
+.btn-forge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-/* Reduced Motion Support */
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }

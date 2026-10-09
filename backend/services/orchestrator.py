@@ -1,6 +1,8 @@
 import asyncio
+import difflib
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from backend.config import settings
@@ -14,6 +16,8 @@ from backend.models.schemas import (
     ResearchDoc,
     GeneratedFile,
     TestResult,
+    DiffChange,
+    RefineResult,
 )
 from backend.services.llm_client import llm_client
 from backend.services.tavily_researcher import tavily_researcher
@@ -56,6 +60,16 @@ Keep internal reasoning concise (under 100 words) and output the full JSON objec
 CODE FORMATTING RULE: In Python code, use single quotes ''' for docstrings or # comments, NEVER use triple double-quotes \"\"\". This ensures valid JSON escaping.
 Return a JSON object containing:
 - "diagnosis": string explanation of root cause
+- "changes": list of objects {"path": string, "explanation": string, "content": string}
+"""
+
+SYSTEM_REFINER_PROMPT = """You are the Principal Refactoring Engineer in SpecForge, powered by NVIDIA Nemotron.
+Your role: Apply targeted, surgical modifications to an existing codebase to fulfill the user's natural-language refinement instruction.
+Do not rebuild the codebase from scratch. Preserve existing patterns, contracts, and working logic while cleanly integrating the requested feature.
+Keep internal reasoning concise (under 80 words) and output the full JSON object immediately.
+CODE FORMATTING RULE: In Python code, use single quotes ''' for docstrings or # comments, NEVER use triple double-quotes \"\"\". This ensures valid JSON escaping.
+Return a JSON object containing:
+- "summary": string explanation of what was changed
 - "changes": list of objects {"path": string, "explanation": string, "content": string}
 """
 
@@ -860,4 +874,423 @@ class DataProcessor:
             ]
         return []
 
+    async def refine_job(self, job_id: str, instruction: str) -> RefineResult:
+        """Applies a targeted, iterative natural-language refinement to an existing repository."""
+        job = storage_service.get_job(job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+
+        refine_id = f"ref_{int(datetime.now().timestamp()*1000)}"
+        now = datetime.now(timezone.utc).isoformat()
+
+        await storage_service.emit_event(
+            job_id, "refiner", "action", f"Initiating targeted refinement: '{instruction}'"
+        )
+
+        ws = storage_service.get_job_workspace(job_id)
+        current_files = {f.path: f.content for f in job.files}
+
+        summary = ""
+        modified_files: List[Dict[str, str]] = []
+
+        if settings.effective_mock_llm:
+            summary, modified_files = self._generate_mock_refinement(job.spec, instruction, current_files)
+        else:
+            files_context = "\n\n".join([f"--- {p} ---\n{c}" for p, c in current_files.items()])
+            user_prompt = (
+                f"Target Refinement Instruction: {instruction}\n"
+                f"Project Type: {job.spec.project_type.value}\n\n"
+                f"Current Repository Files:\n{files_context}"
+            )
+            data, reasoning = llm_client.complete_json(
+                system_prompt=SYSTEM_REFINER_PROMPT,
+                user_prompt=user_prompt,
+                tier="reasoning",
+            )
+            if reasoning:
+                await storage_service.emit_event(
+                    job_id, "refiner", "thought", f"Nemotron Reasoning: {reasoning[:200]}..."
+                )
+            summary = data.get("summary", f"Applied refinement: {instruction}") if isinstance(data, dict) else f"Applied refinement: {instruction}"
+            for ch in (data.get("changes", []) if isinstance(data, dict) else []):
+                if isinstance(ch, dict) and "path" in ch:
+                    modified_files.append({
+                        "path": ch["path"],
+                        "content": ch.get("content") or ch.get("code") or "",
+                        "explanation": ch.get("explanation", "Updated file"),
+                    })
+
+        diff_changes: List[DiffChange] = []
+        for mf in modified_files:
+            path = mf["path"]
+            new_content = mf["content"]
+            old_content = current_files.get(path, "")
+
+            # Compute unified diff
+            diff_lines = list(difflib.unified_diff(
+                old_content.splitlines(keepends=True),
+                new_content.splitlines(keepends=True),
+                fromfile=f"a/{path}",
+                tofile=f"b/{path}",
+            ))
+            diff_text = "".join(diff_lines) if diff_lines else f"# Modified {path}"
+
+            diff_changes.append(DiffChange(
+                path=path,
+                diff=diff_text,
+                explanation=mf.get("explanation")
+            ))
+
+            # Determine language
+            lang = "python"
+            if path.endswith((".ts", ".tsx")):
+                lang = "typescript"
+            elif path.endswith(".js"):
+                lang = "javascript"
+            elif path.endswith(".json"):
+                lang = "json"
+            elif path.endswith(".md"):
+                lang = "markdown"
+
+            storage_service.save_file(job_id, GeneratedFile(
+                path=path,
+                content=new_content,
+                language=lang
+            ))
+            await storage_service.emit_event(
+                job_id, "refiner", "file_written", f"Refined {path}: {mf.get('explanation', 'applied update')}"
+            )
+
+        # Run sandbox tests
+        iter_num = len(job.test_history) + 1
+        await storage_service.emit_event(
+            job_id, "refiner", "action", f"Running sandbox verification suite for refinement (Iteration {iter_num})..."
+        )
+        test_result = await sandbox_runner.run_tests(ws, job.spec.project_type, iteration=iter_num)
+        storage_service.save_test_result(job_id, test_result)
+
+        if not test_result.passed:
+            await storage_service.emit_event(
+                job_id, "refiner", "test_run", f"Tests failed after refinement ({test_result.failed_tests} failed). Triggering fixer loop..."
+            )
+            await self._run_fixer(job_id, job.spec, job.plan, test_result.output, iter_num)
+            test_result = await sandbox_runner.run_tests(ws, job.spec.project_type, iteration=iter_num + 1)
+            storage_service.save_test_result(job_id, test_result)
+        else:
+            await storage_service.emit_event(
+                job_id, "refiner", "test_run", f"All tests passed ({test_result.passed_tests}/{test_result.total_tests} green)!"
+            )
+
+        # Repackage zip export
+        storage_service.create_zip_export(job_id)
+
+        refine_result = RefineResult(
+            id=refine_id,
+            instruction=instruction,
+            timestamp=now,
+            summary=summary,
+            changes=diff_changes,
+            test_result=test_result,
+        )
+        storage_service.save_refinement(job_id, refine_result)
+
+        status_msg = f"Refinement completed: {summary} ({test_result.passed_tests}/{test_result.total_tests} passed)."
+        storage_service.update_job_status(job_id, JobStatus.COMPLETED if test_result.passed else JobStatus.FAILED)
+        await storage_service.emit_event(
+            job_id, "pipeline", "status", status_msg, {"passed": test_result.passed, "changes_count": len(diff_changes)}
+        )
+
+        return refine_result
+
+    def _generate_mock_refinement(
+        self, spec: SpecInput, instruction: str, current_files: Dict[str, str]
+    ) -> tuple[str, List[Dict[str, str]]]:
+        """Provides deterministic, test-passing refinements for offline/mock demo."""
+        modified: List[Dict[str, str]] = []
+        is_retry = "retry" in instruction.lower()
+
+        if spec.project_type == ProjectType.PYTHON_CLI:
+            summary = "Added exponential retry mechanism and enhanced error tolerance to CLI core." if is_retry else f"Integrated '{instruction}' into CLI core logic."
+            core_code = '''"""Core business logic for CLI application with retry logic."""
+from typing import List, Dict, Any, Callable
+import time
+
+class DataProcessor:
+    @staticmethod
+    def process_numbers(numbers: List[float]) -> Dict[str, Any]:
+        """Calculates statistical summary for numbers list."""
+        if not numbers:
+            return {"count": 0, "sum": 0.0, "mean": 0.0, "max": 0.0, "min": 0.0}
+        total = sum(numbers)
+        return {
+            "count": len(numbers),
+            "sum": total,
+            "mean": total / len(numbers),
+            "max": max(numbers),
+            "min": min(numbers)
+        }
+
+    @staticmethod
+    def format_greeting(name: str, shout: bool = False) -> str:
+        clean = name.strip() or "World"
+        msg = f"Hello, {clean}!"
+        return msg.upper() if shout else msg
+
+    @staticmethod
+    def execute_with_retry(fn: Callable[[], Any], max_attempts: int = 3, delay: float = 0.01) -> Any:
+        """Executes a callable with automatic retries on failure."""
+        last_error = None
+        for attempt in range(max_attempts):
+            try:
+                return fn()
+            except Exception as e:
+                last_error = e
+                if attempt < max_attempts - 1 and delay > 0:
+                    time.sleep(delay)
+        raise last_error or RuntimeError("Retry attempts exhausted")
+'''
+            test_code = '''"""Unit test suite for CLI data processor including retry verification."""
+import pytest
+from cli.core import DataProcessor
+
+def test_data_processor_empty():
+    stats = DataProcessor.process_numbers([])
+    assert stats["count"] == 0
+    assert stats["sum"] == 0.0
+
+def test_data_processor_numbers():
+    stats = DataProcessor.process_numbers([10.0, 20.0, 30.0])
+    assert stats["count"] == 3
+    assert stats["sum"] == 60.0
+    assert stats["mean"] == 20.0
+    assert stats["max"] == 30.0
+    assert stats["min"] == 10.0
+
+def test_greeting_format():
+    assert DataProcessor.format_greeting("Alice") == "Hello, Alice!"
+    assert DataProcessor.format_greeting("Bob", shout=True) == "HELLO, BOB!"
+    assert DataProcessor.format_greeting("") == "Hello, World!"
+
+def test_execute_with_retry_success():
+    attempts = 0
+    def flaky():
+        nonlocal attempts
+        attempts += 1
+        if attempts < 2:
+            raise ValueError("Temporary failure")
+        return "success"
+
+    result = DataProcessor.execute_with_retry(flaky, max_attempts=3, delay=0.001)
+    assert result == "success"
+    assert attempts == 2
+
+def test_execute_with_retry_failure():
+    def always_fails():
+        raise RuntimeError("Permanent failure")
+
+    with pytest.raises(RuntimeError):
+        DataProcessor.execute_with_retry(always_fails, max_attempts=2, delay=0.001)
+'''
+            modified.append({
+                "path": "cli/core.py",
+                "content": core_code,
+                "explanation": "Added execute_with_retry helper and resilient execution logic"
+            })
+            modified.append({
+                "path": "tests/test_core.py",
+                "content": test_code,
+                "explanation": "Added comprehensive test cases for retry logic"
+            })
+            return summary, modified
+
+        elif spec.project_type == ProjectType.FASTAPI_SERVICE:
+            summary = "Added resilient retry middleware and client execution logic to FastAPI microservice." if is_retry else f"Added '{instruction}' capability to FastAPI microservice."
+            service_code = '''"""In-memory domain repository and business logic with retry handling."""
+import uuid
+import time
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Callable, Any
+from app.models import ItemCreate, ItemResponse
+
+class ItemRepository:
+    def __init__(self):
+        self._store: Dict[str, ItemResponse] = {}
+
+    def create(self, data: ItemCreate) -> ItemResponse:
+        item_id = str(uuid.uuid4())
+        record = ItemResponse(
+            id=item_id,
+            title=data.title,
+            description=data.description or "",
+            priority=data.priority,
+            created_at=datetime.now(timezone.utc).isoformat()
+        )
+        self._store[item_id] = record
+        return record
+
+    def get(self, item_id: str) -> Optional[ItemResponse]:
+        return self._store.get(item_id)
+
+    def list_all(self) -> List[ItemResponse]:
+        return list(self._store.values())
+
+    def delete(self, item_id: str) -> bool:
+        if item_id in self._store:
+            del self._store[item_id]
+            return True
+        return False
+
+    def execute_with_retry(self, action: Callable[[], Any], max_retries: int = 3) -> Any:
+        """Executes operations with retry resilience."""
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                return action()
+            except Exception as e:
+                last_exc = e
+                time.sleep(0.005)
+        raise last_exc or RuntimeError("Max retries exceeded")
+
+repo = ItemRepository()
+'''
+            api_test_code = '''"""Integration tests for FastAPI endpoints with retry verification."""
+from fastapi.testclient import TestClient
+from app.main import app
+from app.service import repo
+
+client = TestClient(app)
+
+def test_health_check():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+
+def test_create_and_get_item():
+    payload = {"title": "Hackathon Demo", "description": "Verify green test", "priority": 5}
+    create_resp = client.post("/items", json=payload)
+    assert create_resp.status_code == 201
+    created = create_resp.json()
+    assert created["title"] == "Hackathon Demo"
+    item_id = created["id"]
+
+    get_resp = client.get(f"/items/{item_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["id"] == item_id
+
+def test_get_nonexistent_item():
+    resp = client.get("/items/nonexistent-id-999")
+    assert resp.status_code == 404
+
+def test_service_retry_mechanism():
+    call_count = 0
+    def operation():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise ConnectionError("Transient network drop")
+        return "reconnected"
+
+    res = repo.execute_with_retry(operation, max_retries=3)
+    assert res == "reconnected"
+    assert call_count == 2
+'''
+            modified.append({
+                "path": "app/service.py",
+                "content": service_code,
+                "explanation": "Added execute_with_retry resilience handler"
+            })
+            modified.append({
+                "path": "tests/test_api.py",
+                "content": api_test_code,
+                "explanation": "Added integration test for retry behavior"
+            })
+            return summary, modified
+
+        else: # REACT_COMPONENT
+            summary = f"Refined React component to support {instruction}."
+            comp_code = '''import React, { useState } from 'react';
+import { ItemRecord, ComponentProps } from './types';
+
+export const SpecForgeComponent: React.FC<ComponentProps> = ({
+  initialItems = [],
+  title = "SpecForge Task Manager (Refined)",
+  onItemToggle
+}) => {
+  const [items, setItems] = useState<ItemRecord[]>(initialItems);
+  const [newTitle, setNewTitle] = useState("");
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+    const item: ItemRecord = {
+      id: "item-" + Date.now(),
+      title: newTitle.trim(),
+      completed: false,
+      timestamp: new Date().toISOString()
+    };
+    setItems(prev => [...prev, item]);
+    setNewTitle("");
+  };
+
+  const handleToggle = (id: string) => {
+    setItems(prev =>
+      prev.map(item => item.id === id ? { ...item, completed: !item.completed } : item)
+    );
+    if (onItemToggle) onItemToggle(id);
+  };
+
+  const handleRetrySync = () => {
+    setIsRetrying(true);
+    setTimeout(() => setIsRetrying(false), 600);
+  };
+
+  return (
+    <div className="p-6 max-w-md mx-auto bg-slate-900 text-white rounded-xl shadow-md border border-amber-600/30">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-amber-500">{title}</h2>
+        <button
+          onClick={handleRetrySync}
+          className="text-xs px-2.5 py-1 bg-amber-600/20 text-amber-400 border border-amber-500/30 rounded hover:bg-amber-600/30"
+        >
+          {isRetrying ? "Syncing..." : "Sync Retry"}
+        </button>
+      </div>
+      <form onSubmit={handleAdd} className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="New task..."
+          className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 text-sm focus:outline-none"
+        />
+        <button type="submit" className="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-medium">
+          Add
+        </button>
+      </form>
+      <ul className="space-y-2">
+        {items.map(item => (
+          <li key={item.id} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={item.completed}
+              onChange={() => handleToggle(item.id)}
+              className="rounded accent-amber-500"
+            />
+            <span className={item.completed ? "line-through text-slate-400" : ""}>{item.title}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+'''
+            modified.append({
+                "path": "src/Component.tsx",
+                "content": comp_code,
+                "explanation": "Added sync retry action and refined styles"
+            })
+            return summary, modified
+
 orchestrator = AgenticOrchestrator()
+

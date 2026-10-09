@@ -11,6 +11,11 @@ import {
   FlaskConical,
   Terminal,
   Code,
+  Edit3,
+  Eye,
+  Save,
+  RotateCcw,
+  RefreshCw,
 } from 'lucide-react';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -24,18 +29,45 @@ import 'prismjs/components/prism-markdown';
 interface FileBrowserProps {
   files: GeneratedFile[];
   downloadUrl?: string;
+  jobId?: string;
+  onSaveFile?: (path: string, content: string) => Promise<void>;
+  onRetest?: () => Promise<void>;
+  isRetesting?: boolean;
 }
 
-export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) => {
+export const FileBrowser: React.FC<FileBrowserProps> = ({
+  files,
+  downloadUrl,
+  jobId,
+  onSaveFile,
+  onRetest,
+  isRetesting = false,
+}) => {
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const activeFile = files.find((f) => f.path === selectedPath) || files[0];
 
+  // Update edited content when file changes
   useEffect(() => {
-    Prism.highlightAll();
-  }, [activeFile?.path, files]);
+    if (activeFile) {
+      setEditedContent(activeFile.content);
+      setIsEditing(false);
+      setSaveSuccess(false);
+    }
+  }, [activeFile?.path]);
+
+  // Prism highlight effect
+  useEffect(() => {
+    if (!isEditing) {
+      Prism.highlightAll();
+    }
+  }, [activeFile?.path, files, isEditing]);
 
   const totalLines = useMemo(() => {
     return files.reduce((acc, f) => acc + (f.content ? f.content.split('\n').length : 0), 0);
@@ -47,11 +79,33 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
     return files.filter((f) => f.path.toLowerCase().includes(query));
   }, [files, searchQuery]);
 
+  const hasUnsavedChanges = activeFile && editedContent !== activeFile.content;
+
   const handleCopy = () => {
     if (!activeFile) return;
-    navigator.clipboard.writeText(activeFile.content);
+    navigator.clipboard.writeText(isEditing ? editedContent : activeFile.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = async () => {
+    if (!activeFile || !onSaveFile) return;
+    setIsSaving(true);
+    try {
+      await onSaveFile(activeFile.path, editedContent);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      console.error('Failed to save file:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (activeFile) {
+      setEditedContent(activeFile.content);
+    }
   };
 
   const getGrammarLanguage = (lang: string, path: string) => {
@@ -66,19 +120,19 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
 
   const getFileIcon = (path: string) => {
     if (path.includes('test') || path.endsWith('_test.py')) {
-      return <FlaskConical size={14} color="#f59e0b" />;
+      return <FlaskConical size={14} color="var(--accent-amber-bright)" />;
     }
     if (path.endsWith('.py')) {
-      return <FileCode size={14} color="var(--accent-cyan-bright)" />;
+      return <FileCode size={14} color="var(--accent-amber-bright)" />;
     }
     if (path.endsWith('.ts') || path.endsWith('.tsx') || path.endsWith('.js')) {
-      return <Code size={14} color="#a78bfa" />;
+      return <Code size={14} color="#ffa366" />;
     }
     if (path.endsWith('.md')) {
       return <FileText size={14} color="#94a3b8" />;
     }
     if (path.endsWith('.sh') || path.endsWith('requirements.txt')) {
-      return <Terminal size={14} color="#34d399" />;
+      return <Terminal size={14} color="#cbd5e1" />;
     }
     return <FileCode size={14} color="var(--text-muted)" />;
   };
@@ -94,7 +148,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
           marginBottom: '1.75rem',
         }}
       >
-        <Folder size={36} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
+        <Folder size={36} color="var(--accent-amber)" style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
         <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
           No Repository Files Generated Yet
         </h4>
@@ -113,13 +167,14 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
         marginBottom: '1.75rem',
         display: 'flex',
         flexDirection: 'column',
+        border: '1px solid var(--border-amber)',
       }}
     >
       {/* Top Action Bar */}
       <div
         style={{
           padding: '0.85rem 1.35rem',
-          background: 'rgba(15, 20, 32, 0.75)',
+          background: 'rgba(15, 16, 21, 0.95)',
           borderBottom: '1px solid var(--border-default)',
           display: 'flex',
           alignItems: 'center',
@@ -129,15 +184,15 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <Folder size={18} color="var(--accent-cyan-bright)" />
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em' }}>
-            Generated Repository Workspace
+          <Folder size={17} color="var(--accent-amber-bright)" />
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+            Forged Repository Workspace
           </h3>
           <span
-            className="badge badge-cyan"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}
+            className="badge badge-amber"
+            style={{ fontSize: '0.68rem' }}
           >
-            {files.length} file{files.length === 1 ? '' : 's'}
+            {files.length} FILE{files.length === 1 ? '' : 'S'}
           </span>
           <span
             style={{
@@ -146,36 +201,71 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
               color: 'var(--text-muted)',
             }}
           >
-            {totalLines} lines generated
+            {totalLines} lines
           </span>
         </div>
 
-        {downloadUrl && (
-          <a
-            href={downloadUrl}
-            download
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.45rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Download size={14} />
-            <span>Download Verified ZIP</span>
-          </a>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {/* Re-run Tests Button */}
+          {onRetest && (
+            <button
+              type="button"
+              onClick={onRetest}
+              disabled={isRetesting}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.4rem 0.85rem',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(255, 107, 26, 0.12)',
+                border: '1px solid var(--border-amber)',
+                color: 'var(--accent-amber-bright)',
+                fontSize: '0.76rem',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                cursor: isRetesting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Runs isolated sandbox test verification on current files"
+            >
+              {isRetesting ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <FlaskConical size={13} />
+              )}
+              <span>{isRetesting ? 'Running Sandbox...' : 'Re-run Tests'}</span>
+            </button>
+          )}
+
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              download
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.4rem 0.95rem',
+                borderRadius: 'var(--radius-sm)',
+                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                color: '#ffffff',
+                fontSize: '0.76rem',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 2px 10px rgba(34, 197, 94, 0.3)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Download size={13} />
+              <span>Download ZIP</span>
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Main Split Layout: Sidebar + Code Preview */}
+      {/* Main Split Layout: Sidebar + Code Preview / Editor */}
       <div
         style={{
           display: 'grid',
@@ -186,7 +276,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
         {/* Left File Tree Sidebar */}
         <div
           style={{
-            background: 'rgba(8, 11, 18, 0.85)',
+            background: 'rgba(10, 11, 15, 0.9)',
             borderRight: '1px solid var(--border-default)',
             display: 'flex',
             flexDirection: 'column',
@@ -216,9 +306,9 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
                   background: 'transparent',
                   border: 'none',
                   color: 'var(--text-primary)',
-                  fontSize: '0.78rem',
+                  fontSize: '0.76rem',
                   outline: 'none',
-                  fontFamily: 'inherit',
+                  fontFamily: 'var(--font-mono)',
                 }}
               />
             </div>
@@ -245,7 +335,10 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
                 <button
                   type="button"
                   key={file.path}
-                  onClick={() => setSelectedPath(file.path)}
+                  onClick={() => {
+                    setSelectedPath(file.path);
+                    setIsEditing(false);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -253,12 +346,12 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
                     padding: '0.45rem 0.65rem',
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
-                    background: isSelected ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+                    background: isSelected ? 'rgba(255, 107, 26, 0.12)' : 'transparent',
                     color: isSelected ? '#ffffff' : 'var(--text-secondary)',
                     fontWeight: isSelected ? 600 : 400,
                     textAlign: 'left',
                     cursor: 'pointer',
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     fontFamily: 'var(--font-mono)',
                     transition: 'all 0.12s ease',
                     position: 'relative',
@@ -291,11 +384,11 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
                       <span
                         style={{
                           fontSize: '0.62rem',
-                          background: 'rgba(245, 158, 11, 0.2)',
-                          color: '#fbbf24',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          background: 'rgba(255, 107, 26, 0.15)',
+                          color: 'var(--accent-amber-bright)',
+                          border: '1px solid rgba(255, 107, 26, 0.3)',
                           padding: '0 4px',
-                          borderRadius: '3px',
+                          borderRadius: '2px',
                           fontWeight: 700,
                         }}
                       >
@@ -312,7 +405,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
           </div>
         </div>
 
-        {/* Right Code Viewer */}
+        {/* Right Code Viewer & In-Browser Editor */}
         <div
           style={{
             display: 'flex',
@@ -323,20 +416,21 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
         >
           {activeFile && (
             <>
-              {/* Code Viewer Top Bar */}
+              {/* Code Viewer / Editor Top Bar */}
               <div
                 style={{
                   padding: '0.6rem 1.25rem',
                   borderBottom: '1px solid var(--border-subtle)',
-                  background: 'rgba(12, 16, 26, 0.95)',
+                  background: 'rgba(14, 15, 20, 0.95)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '0.75rem',
+                  flexWrap: 'wrap',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                  <FileText size={15} color="var(--accent-cyan-bright)" />
+                  <FileText size={15} color="var(--accent-amber-bright)" />
                   <span
                     style={{
                       fontSize: '0.82rem',
@@ -350,62 +444,198 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ files, downloadUrl }) 
                   >
                     {activeFile.path}
                   </span>
+
                   <span
                     className="badge badge-slate"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.68rem',
-                      padding: '0.1rem 0.45rem',
-                    }}
+                    style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem' }}
                   >
-                    {activeFile.content.split('\n').length} lines
+                    {(isEditing ? editedContent : activeFile.content).split('\n').length} lines
                   </span>
+
+                  {hasUnsavedChanges && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        fontFamily: 'var(--font-mono)',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        color: '#fbbf24',
+                        padding: '1px 6px',
+                        borderRadius: '2px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Unsaved edits
+                    </span>
+                  )}
+
+                  {saveSuccess && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        fontFamily: 'var(--font-mono)',
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        border: '1px solid rgba(34, 197, 94, 0.35)',
+                        color: 'var(--color-success-bright)',
+                        padding: '1px 6px',
+                        borderRadius: '2px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Saved!
+                    </span>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.3rem 0.65rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: copied ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                    border: `1px solid ${copied ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-subtle)'}`,
-                    color: copied ? 'var(--color-success-bright)' : '#cbd5e1',
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {copied ? <Check size={13} color="var(--color-success-bright)" /> : <Copy size={13} />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
-                </button>
+                {/* Editor & Copy Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  {/* Toggle Edit / View */}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(!isEditing)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: isEditing ? 'rgba(255, 107, 26, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${isEditing ? 'var(--border-amber)' : 'var(--border-subtle)'}`,
+                      color: isEditing ? 'var(--accent-amber-bright)' : '#cbd5e1',
+                      fontSize: '0.74rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.12s ease',
+                    }}
+                  >
+                    {isEditing ? <Eye size={12} /> : <Edit3 size={12} />}
+                    <span>{isEditing ? 'View Mode' : 'Edit Mode'}</span>
+                  </button>
+
+                  {isEditing && (
+                    <>
+                      {/* Save Button */}
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving || !hasUnsavedChanges}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.3rem 0.65rem',
+                          borderRadius: 'var(--radius-sm)',
+                          background: hasUnsavedChanges
+                            ? 'linear-gradient(135deg, #ff6b1a, #e0550c)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${hasUnsavedChanges ? 'rgba(255, 255, 255, 0.2)' : 'var(--border-subtle)'}`,
+                          color: '#ffffff',
+                          fontSize: '0.74rem',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 700,
+                          cursor: hasUnsavedChanges ? 'pointer' : 'default',
+                          opacity: hasUnsavedChanges ? 1 : 0.5,
+                        }}
+                      >
+                        {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+                        <span>Save File</span>
+                      </button>
+
+                      {/* Reset Changes */}
+                      {hasUnsavedChanges && (
+                        <button
+                          type="button"
+                          onClick={handleReset}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.74rem',
+                            cursor: 'pointer',
+                          }}
+                          title="Discard unsaved edits"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* Copy Button */}
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: copied ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${copied ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-subtle)'}`,
+                      color: copied ? 'var(--color-success-bright)' : '#cbd5e1',
+                      fontSize: '0.74rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copied ? <Check size={12} color="var(--color-success-bright)" /> : <Copy size={12} />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Code Pre/Code Area */}
+              {/* Code Pre or Textarea Editor */}
               <div
                 style={{
                   padding: '1.25rem',
                   overflowX: 'auto',
                   flex: 1,
-                  maxHeight: '500px',
+                  maxHeight: '520px',
+                  display: 'flex',
                 }}
               >
-                <pre style={{ margin: 0, background: 'transparent' }}>
-                  <code
-                    className={`language-${getGrammarLanguage(activeFile.language, activeFile.path)}`}
+                {isEditing ? (
+                  <textarea
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
                     style={{
+                      width: '100%',
+                      height: '100%',
+                      minHeight: '440px',
+                      background: '#090a0d',
+                      border: '1px solid var(--border-amber)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '1rem',
+                      color: '#f8fafc',
+                      fontFamily: 'var(--font-mono)',
                       fontSize: '0.82rem',
                       lineHeight: 1.6,
-                      fontFamily: 'var(--font-mono)',
+                      resize: 'vertical',
+                      outline: 'none',
                     }}
-                  >
-                    {activeFile.content}
-                  </code>
-                </pre>
+                  />
+                ) : (
+                  <pre style={{ margin: 0, background: 'transparent', width: '100%' }}>
+                    <code
+                      className={`language-${getGrammarLanguage(activeFile.language, activeFile.path)}`}
+                      style={{
+                        fontSize: '0.82rem',
+                        lineHeight: 1.6,
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      {activeFile.content}
+                    </code>
+                  </pre>
+                )}
               </div>
             </>
           )}

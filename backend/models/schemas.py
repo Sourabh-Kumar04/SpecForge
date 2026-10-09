@@ -68,6 +68,46 @@ class AgentEvent(BaseModel):
     message: str
     data: Optional[Dict[str, Any]] = None
 
+class FileUpdateInput(BaseModel):
+    path: str
+    content: str
+
+class RefineInput(BaseModel):
+    instruction: str = Field(..., description="Targeted natural language refinement instruction")
+
+class DiffChange(BaseModel):
+    path: str
+    diff: str
+    explanation: Optional[str] = None
+
+class RefineResult(BaseModel):
+    id: str
+    instruction: str
+    timestamp: str
+    summary: str
+    changes: List[DiffChange] = []
+    test_result: Optional[TestResult] = None
+
+class PreviewStatus(str, Enum):
+    IDLE = "idle"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    ERROR = "error"
+    COMPLETED = "completed"
+
+class PreviewRequest(BaseModel):
+    args: Optional[str] = None
+
+class PreviewResponse(BaseModel):
+    job_id: str
+    project_type: ProjectType
+    status: PreviewStatus
+    port: Optional[int] = None
+    url: Optional[str] = None
+    direct_url: Optional[str] = None
+    terminal_output: Optional[str] = None
+    message: str
+
 class JobDetail(BaseModel):
     job_id: str
     spec: SpecInput
@@ -83,3 +123,5 @@ class JobDetail(BaseModel):
     events: List[AgentEvent] = []
     download_url: Optional[str] = None
     workspace_dir: Optional[str] = None
+    refinements: List[RefineResult] = []
+

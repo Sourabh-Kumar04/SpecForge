@@ -17,6 +17,7 @@ from backend.models.schemas import (
     GeneratedFile,
     TestResult,
     AgentEvent,
+    RefineResult,
 )
 
 class StorageService:
@@ -50,7 +51,8 @@ class StorageService:
                     research_json TEXT,
                     error TEXT,
                     workspace_dir TEXT,
-                    spec_json TEXT
+                    spec_json TEXT,
+                    refinements_json TEXT
                 )
             """)
             # Schema migration for existing sqlite db
@@ -58,6 +60,8 @@ class StorageService:
             cols = [col[1] for col in cursor.fetchall()]
             if "spec_json" not in cols:
                 conn.execute("ALTER TABLE jobs ADD COLUMN spec_json TEXT")
+            if "refinements_json" not in cols:
+                conn.execute("ALTER TABLE jobs ADD COLUMN refinements_json TEXT")
 
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS files (
@@ -211,6 +215,23 @@ class StorageService:
             )
             conn.commit()
 
+    def save_refinement(self, job_id: str, refinement: RefineResult):
+        now = datetime.now(timezone.utc).isoformat()
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT refinements_json FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+            current = []
+            if row and row["refinements_json"]:
+                try:
+                    current = json.loads(row["refinements_json"])
+                except Exception:
+                    current = []
+            current.append(refinement.model_dump())
+            conn.execute(
+                "UPDATE jobs SET refinements_json = ?, updated_at = ? WHERE job_id = ?",
+                (json.dumps(current), now, job_id),
+            )
+            conn.commit()
+
     async def emit_event(self, job_id: str, stage: str, event_type: str, message: str, data: Optional[Dict[str, Any]] = None):
         event_id = f"evt_{int(datetime.now().timestamp()*1000)}"
         now = datetime.now(timezone.utc).isoformat()
@@ -313,6 +334,13 @@ class StorageService:
             zip_path = self.zips_dir / f"{job_id}.zip"
             download_url = f"/api/jobs/{job_id}/download" if zip_path.exists() else None
 
+            refinements = []
+            if "refinements_json" in row.keys() and row["refinements_json"]:
+                try:
+                    refinements = [RefineResult.model_validate(r) for r in json.loads(row["refinements_json"])]
+                except Exception:
+                    refinements = []
+
             return JobDetail(
                 job_id=job_id,
                 spec=spec,
@@ -328,6 +356,7 @@ class StorageService:
                 events=events,
                 download_url=download_url,
                 workspace_dir=row["workspace_dir"],
+                refinements=refinements,
             )
 
     def list_jobs(self, limit: int = 20) -> List[Dict[str, Any]]:

@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Check,
   Radio,
+  Flame,
 } from 'lucide-react';
 
 interface AgentTimelineProps {
@@ -45,16 +46,16 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
   const isResearchDisabled = enableResearch === false;
 
   const stages = [
-    { key: 'planning', label: '1. Architecture Plan', icon: Bot, desc: 'Nemotron reasoning' },
+    { key: 'planning', label: '1. BLUEPRINT', icon: Bot, desc: 'Nemotron reasoning' },
     {
       key: 'researching',
-      label: isResearchDisabled ? '2. Docs (Skipped)' : '2. Tavily Grounding',
+      label: isResearchDisabled ? '2. GROUND (OFF)' : '2. TAVILY GROUND',
       icon: Search,
       desc: isResearchDisabled ? 'Grounding disabled' : 'Live API signatures',
     },
-    { key: 'coding', label: '3. Code Synthesis', icon: Code2, desc: 'Multi-file generation' },
-    { key: 'testing', label: '4. Sandbox Execution', icon: FlaskConical, desc: 'Pytest assertions' },
-    { key: 'fixing', label: '5. Fixer Loop', icon: Wrench, desc: 'Autonomous bugfix' },
+    { key: 'coding', label: '3. SYNTHESIS', icon: Code2, desc: 'Multi-file code forge' },
+    { key: 'testing', label: '4. SANDBOX', icon: FlaskConical, desc: 'Isolated test run' },
+    { key: 'fixing', label: '5. FIXER LOOP', icon: Wrench, desc: 'Autonomous bugfix' },
     { key: 'completed', label: '6. VERIFIED ✓', icon: CheckCircle2, desc: '100% tests green' },
   ];
 
@@ -78,15 +79,16 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
   const getStageColor = (ev: AgentEvent) => {
     const stage = ev.stage?.toLowerCase() || '';
     const type = ev.event_type;
-    if (type === 'error') return '#ef4444';
-    if (type === 'thought') return '#c084fc';
-    if (type === 'test_run') return ev.data?.passed ? '#4ade80' : '#f87171';
-    if (stage.includes('research')) return '#06b6d4';
-    if (stage.includes('plan')) return '#818cf8';
-    if (stage.includes('code') || stage.includes('synth')) return '#38bdf8';
+    if (type === 'error') return 'var(--color-error-bright)';
+    if (type === 'thought') return 'var(--accent-amber-bright)';
+    if (type === 'test_run') return ev.data?.passed ? 'var(--color-success-bright)' : 'var(--color-error-bright)';
+    if (stage.includes('research')) return '#38bdf8';
+    if (stage.includes('refin')) return 'var(--accent-amber-bright)';
+    if (stage.includes('plan')) return '#a78bfa';
+    if (stage.includes('code') || stage.includes('synth')) return 'var(--accent-amber-bright)';
     if (stage.includes('test') || stage.includes('sandbox')) return '#fbbf24';
     if (stage.includes('fix')) return '#f43f5e';
-    return '#94a3b8';
+    return 'var(--text-secondary)';
   };
 
   return (
@@ -111,42 +113,35 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <div
-            className="pulse-dot"
+            className="pulse-ember"
             style={{
-              width: '9px',
-              height: '9px',
+              width: '8px',
+              height: '8px',
               borderRadius: '50%',
               background:
                 status === 'completed'
                   ? 'var(--color-success-bright)'
                   : status === 'failed'
                   ? 'var(--color-error-bright)'
-                  : 'var(--accent-cyan-bright)',
-              boxShadow: `0 0 10px ${
-                status === 'completed' ? 'var(--color-success)' : 'var(--accent-cyan)'
-              }`,
+                  : 'var(--accent-amber-bright)',
             }}
           />
           <h3
             style={{
-              fontSize: '1rem',
+              fontSize: '0.98rem',
               fontWeight: 800,
               color: '#ffffff',
               letterSpacing: '-0.02em',
             }}
           >
-            Live Agentic Synthesis Pipeline
+            Agentic Pipeline Telemetry
           </h3>
           <span
             className="badge badge-slate"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.7rem',
-              gap: '0.35rem',
-            }}
+            style={{ fontSize: '0.68rem', gap: '0.35rem' }}
           >
-            <Radio size={11} color="var(--accent-cyan-bright)" />
-            SSE Stream Active
+            <Radio size={11} color="var(--accent-amber-bright)" />
+            SSE FEED LIVE
           </span>
         </div>
 
@@ -155,18 +150,19 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             type="button"
             onClick={() => setAutoScroll(!autoScroll)}
             style={{
-              background: autoScroll ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-              border: `1px solid ${autoScroll ? 'rgba(6, 182, 212, 0.35)' : 'var(--border-subtle)'}`,
-              color: autoScroll ? 'var(--accent-cyan-bright)' : 'var(--text-muted)',
+              background: autoScroll ? 'rgba(255, 107, 26, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+              border: `1px solid ${autoScroll ? 'var(--border-amber)' : 'var(--border-subtle)'}`,
+              color: autoScroll ? 'var(--accent-amber-bright)' : 'var(--text-muted)',
               borderRadius: 'var(--radius-sm)',
-              padding: '0.25rem 0.6rem',
+              padding: '0.25rem 0.55rem',
               fontSize: '0.72rem',
+              fontFamily: 'var(--font-mono)',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
           >
-            Auto-scroll: {autoScroll ? 'ON' : 'OFF'}
+            AUTO-SCROLL: {autoScroll ? 'ON' : 'OFF'}
           </button>
 
           <button
@@ -177,30 +173,29 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
-              padding: '0.25rem 0.6rem',
+              padding: '0.25rem 0.55rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '0.3rem',
               fontSize: '0.72rem',
+              fontFamily: 'var(--font-mono)',
               fontWeight: 600,
-              transition: 'all 0.15s ease',
             }}
           >
             {showLogs ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            <span>{showLogs ? 'Collapse Feed' : 'Expand Feed'}</span>
+            <span>{showLogs ? 'COLLAPSE' : 'EXPAND'}</span>
           </button>
         </div>
       </div>
 
-      {/* Animated Pipeline Stage Flow Track */}
+      {/* Pipeline Stage Flow Track */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           gap: '0.65rem',
           marginBottom: '1.25rem',
-          position: 'relative',
         }}
       >
         {stages.map((st) => {
@@ -214,30 +209,27 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
           let boxShadow = 'none';
 
           if (state === 'skipped') {
-            borderColor = 'rgba(100, 116, 139, 0.25)';
-            bgColor = 'rgba(15, 23, 42, 0.3)';
+            borderColor = 'rgba(255, 255, 255, 0.04)';
+            bgColor = 'rgba(15, 16, 20, 0.3)';
             iconColor = 'var(--text-dim)';
             textColor = 'var(--text-dim)';
           } else if (state === 'current') {
-            borderColor = 'var(--accent-cyan)';
-            bgColor = 'linear-gradient(145deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 24, 40, 0.9) 100%)';
-            iconColor = 'var(--accent-cyan-bright)';
+            borderColor = 'var(--accent-amber)';
+            bgColor = 'rgba(255, 107, 26, 0.1)';
+            iconColor = 'var(--accent-amber-bright)';
             textColor = '#ffffff';
-            boxShadow = '0 0 16px -2px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6, 182, 212, 0.4)';
+            boxShadow = '0 0 16px -2px rgba(255, 107, 26, 0.35)';
           } else if (state === 'completed') {
-            borderColor = st.key === 'completed' ? 'var(--color-success)' : 'rgba(34, 197, 94, 0.4)';
-            bgColor =
-              st.key === 'completed'
-                ? 'linear-gradient(145deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 32, 24, 0.9) 100%)'
-                : 'rgba(34, 197, 94, 0.08)';
+            borderColor = st.key === 'completed' ? 'var(--color-success)' : 'rgba(34, 197, 94, 0.35)';
+            bgColor = st.key === 'completed' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(34, 197, 94, 0.05)';
             iconColor = 'var(--color-success-bright)';
             textColor = st.key === 'completed' ? 'var(--color-success-bright)' : '#e2e8f0';
             if (st.key === 'completed') {
-              boxShadow = '0 0 20px -2px rgba(34, 197, 94, 0.45)';
+              boxShadow = '0 0 16px -2px rgba(34, 197, 94, 0.4)';
             }
           } else if (state === 'failed') {
             borderColor = 'var(--color-error)';
-            bgColor = 'rgba(239, 68, 68, 0.12)';
+            bgColor = 'rgba(239, 68, 68, 0.1)';
             iconColor = 'var(--color-error-bright)';
             textColor = 'var(--color-error-bright)';
           }
@@ -248,31 +240,31 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.35rem',
+                gap: '0.3rem',
                 padding: '0.75rem 0.85rem',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: 'var(--radius-sm)',
                 background: bgColor,
                 border: `1px solid ${borderColor}`,
                 boxShadow: boxShadow,
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                position: 'relative',
+                transition: 'all 0.18s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   {state === 'current' ? (
-                    <RefreshCw size={14} color={iconColor} className="animate-spin" />
+                    <RefreshCw size={13} color={iconColor} className="animate-spin" />
                   ) : state === 'completed' ? (
-                    <Check size={14} color={iconColor} strokeWidth={3} />
+                    <Check size={13} color={iconColor} strokeWidth={3} />
                   ) : (
-                    <Icon size={14} color={iconColor} />
+                    <Icon size={13} color={iconColor} />
                   )}
                   <span
                     style={{
-                      fontSize: '0.76rem',
+                      fontSize: '0.74rem',
                       fontWeight: 700,
                       color: textColor,
                       whiteSpace: 'nowrap',
+                      fontFamily: 'var(--font-mono)',
                     }}
                   >
                     {st.label}
@@ -285,8 +277,8 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: 'var(--accent-cyan-bright)',
-                      boxShadow: '0 0 6px var(--accent-cyan)',
+                      background: 'var(--accent-amber-bright)',
+                      boxShadow: '0 0 6px var(--accent-amber)',
                     }}
                   />
                 )}
@@ -295,7 +287,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               <div
                 style={{
                   fontSize: '0.68rem',
-                  color: state === 'current' ? 'var(--accent-cyan-bright)' : 'var(--text-muted)',
+                  color: state === 'current' ? 'var(--accent-amber-bright)' : 'var(--text-muted)',
                   fontFamily: 'var(--font-mono)',
                 }}
               >
@@ -306,163 +298,14 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
         })}
       </div>
 
-      {/* Dominant Verification Banner (Testing / Fixing / Completed) */}
-      {(status === 'completed' || status === 'testing' || status === 'fixing') && (
-        <div
-          style={{
-            background:
-              status === 'completed'
-                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.08) 100%)'
-                : status === 'fixing'
-                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)'
-                : 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 165, 233, 0.05) 100%)',
-            border: `1.5px solid ${
-              status === 'completed'
-                ? 'var(--color-success)'
-                : status === 'fixing'
-                ? 'var(--color-warning)'
-                : 'var(--accent-cyan)'
-            }`,
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem 1.35rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            boxShadow:
-              status === 'completed'
-                ? '0 0 28px -2px rgba(34, 197, 94, 0.3)'
-                : '0 0 20px -4px rgba(6, 182, 212, 0.25)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background:
-                  status === 'completed'
-                    ? 'rgba(34, 197, 94, 0.25)'
-                    : status === 'fixing'
-                    ? 'rgba(245, 158, 11, 0.25)'
-                    : 'rgba(6, 182, 212, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {status === 'completed' ? (
-                <ShieldCheck size={24} color="var(--color-success-bright)" />
-              ) : status === 'fixing' ? (
-                <Wrench size={22} color="var(--color-warning-bright)" className="animate-spin" />
-              ) : (
-                <FlaskConical size={22} color="var(--accent-cyan-bright)" className="animate-spin" />
-              )}
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    fontSize: '1rem',
-                    fontWeight: 800,
-                    color:
-                      status === 'completed'
-                        ? 'var(--color-success-bright)'
-                        : status === 'fixing'
-                        ? 'var(--color-warning-bright)'
-                        : 'var(--accent-cyan-bright)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  {status === 'completed'
-                    ? 'VERIFIED ✓ TEST REPORT PASSED'
-                    : status === 'fixing'
-                    ? 'AUTONOMOUS FIXER LOOP RUNNING'
-                    : 'ISOLATED SANDBOX EXECUTION IN PROGRESS'}
-                </span>
-
-                <span
-                  className={`badge ${
-                    status === 'completed'
-                      ? 'badge-green'
-                      : status === 'fixing'
-                      ? 'badge-amber'
-                      : 'badge-cyan'
-                  }`}
-                  style={{ fontSize: '0.72rem' }}
-                >
-                  {status === 'completed'
-                    ? '100% Green Assertions'
-                    : status === 'fixing'
-                    ? 'Auto-Patching Codebase'
-                    : 'Isolated Pytest Runner'}
-                </span>
-              </div>
-
-              <p style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', margin: 0 }}>
-                {status === 'completed'
-                  ? 'All unit & integration assertions successfully executed in isolated container. Zero hallucinations.'
-                  : status === 'fixing'
-                  ? 'NVIDIA Nemotron reasoning engine analyzing test failure output to synthesize targeted bugfixes.'
-                  : 'Executing code test harness in isolated subprocess with strict assertion boundaries.'}
-              </p>
-            </div>
-          </div>
-
-          {status === 'completed' && (
-            <div
-              style={{
-                background: 'var(--color-success)',
-                color: '#052e16',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                padding: '0.35rem 0.85rem',
-                borderRadius: 'var(--radius-sm)',
-                letterSpacing: '0.04em',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 0 14px rgba(34, 197, 94, 0.5)',
-              }}
-            >
-              VERIFIED ✓
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Live Researching Notification Banner */}
-      {status === 'researching' && (
-        <div
-          style={{
-            background: 'rgba(6, 182, 212, 0.1)',
-            border: '1px solid rgba(6, 182, 212, 0.4)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.85rem 1.15rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-          }}
-        >
-          <RefreshCw size={17} color="var(--accent-cyan-bright)" className="animate-spin" />
-          <div style={{ fontSize: '0.84rem', color: '#e0f2fe' }}>
-            <strong style={{ color: 'var(--accent-cyan-bright)' }}>Tavily AI Search active:</strong>{' '}
-            Retrieving latest live API documentation and official library schemas to ground generation...
-          </div>
-        </div>
-      )}
-
       {/* Tavily Grounded Research Notes Card */}
       {researchNotes && researchNotes.length > 0 && (
         <div
           style={{
-            background: 'rgba(6, 182, 212, 0.05)',
-            border: '1px solid rgba(6, 182, 212, 0.22)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem 1.25rem',
+            background: 'rgba(255, 107, 26, 0.04)',
+            border: '1px solid var(--border-amber)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '0.9rem 1.15rem',
             marginBottom: '1rem',
           }}
         >
@@ -471,41 +314,38 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '0.75rem',
+              marginBottom: '0.65rem',
               flexWrap: 'wrap',
               gap: '0.5rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-              <Search size={15} color="var(--accent-cyan-bright)" />
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
-                Tavily Live Grounded Research
-              </span>
-              <span className="badge badge-cyan" style={{ fontSize: '0.68rem' }}>
-                Best Use of Tavily Prize Track ($3k)
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Search size={14} color="var(--accent-amber-bright)" />
+              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff' }}>
+                Grounded Documentation (Tavily AI Search)
               </span>
             </div>
 
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              {researchNotes.length} documentation source{researchNotes.length > 1 ? 's' : ''} grounded
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {researchNotes.length} source{researchNotes.length > 1 ? 's' : ''} retrieved
             </span>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-              gap: '0.75rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '0.65rem',
             }}
           >
             {researchNotes.map((doc, idx) => (
               <div
                 key={idx}
                 style={{
-                  background: 'rgba(10, 14, 22, 0.8)',
+                  background: 'rgba(14, 15, 20, 0.75)',
                   border: '1px solid var(--border-default)',
                   borderRadius: 'var(--radius-sm)',
-                  padding: '0.75rem 0.9rem',
+                  padding: '0.7rem 0.85rem',
                 }}
               >
                 <div
@@ -514,10 +354,10 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                     alignItems: 'flex-start',
                     justifyContent: 'space-between',
                     gap: '0.5rem',
-                    marginBottom: '0.35rem',
+                    marginBottom: '0.3rem',
                   }}
                 >
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent-cyan-bright)' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-amber-bright)' }}>
                     {doc.title}
                   </span>
                   {doc.url && (
@@ -525,44 +365,31 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                       href={doc.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--text-muted)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        flexShrink: 0,
-                      }}
-                      title="View grounded documentation source"
+                      style={{ color: 'var(--text-muted)', display: 'inline-flex' }}
+                      title="View source"
                     >
-                      <ExternalLink size={13} />
+                      <ExternalLink size={12} />
                     </a>
                   )}
                 </div>
 
-                <p
-                  style={{
-                    fontSize: '0.76rem',
-                    color: '#cbd5e1',
-                    lineHeight: 1.45,
-                    marginBottom: '0.45rem',
-                    margin: 0,
-                  }}
-                >
+                <p style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: 1.45, margin: 0 }}>
                   {doc.summary}
                 </p>
 
                 {doc.key_apis && doc.key_apis.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.4rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
                     {doc.key_apis.map((api, kIdx) => (
                       <span
                         key={kIdx}
                         style={{
-                          fontSize: '0.68rem',
+                          fontSize: '0.66rem',
                           fontFamily: 'var(--font-mono)',
-                          background: 'rgba(6, 182, 212, 0.15)',
-                          color: '#7dd3fc',
+                          background: 'rgba(255, 107, 26, 0.1)',
+                          color: 'var(--accent-amber-bright)',
                           padding: '1px 5px',
-                          borderRadius: '3px',
-                          border: '1px solid rgba(6, 182, 212, 0.25)',
+                          borderRadius: '2px',
+                          border: '1px solid rgba(255, 107, 26, 0.25)',
                         }}
                       >
                         {api}
@@ -580,37 +407,31 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
       {latestThought && (
         <div
           style={{
-            background: 'rgba(139, 92, 246, 0.08)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.85rem 1.15rem',
+            background: 'rgba(255, 107, 26, 0.05)',
+            border: '1px solid var(--border-amber)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '0.75rem 1rem',
             marginBottom: '1rem',
             display: 'flex',
-            gap: '0.75rem',
+            gap: '0.65rem',
           }}
         >
-          <Bot size={18} color="var(--accent-violet-bright)" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <Bot size={16} color="var(--accent-amber-bright)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
             <div
               style={{
-                fontSize: '0.72rem',
+                fontSize: '0.7rem',
                 fontWeight: 700,
-                color: 'var(--accent-violet-bright)',
+                color: 'var(--accent-amber-bright)',
                 textTransform: 'uppercase',
+                fontFamily: 'var(--font-mono)',
                 letterSpacing: '0.04em',
-                marginBottom: '0.25rem',
+                marginBottom: '0.2rem',
               }}
             >
-              Nemotron Reasoning Trace (Internal Thinking)
+              Nemotron Reasoning Trace
             </div>
-            <div
-              style={{
-                fontSize: '0.84rem',
-                color: '#e2e8f0',
-                lineHeight: 1.5,
-                fontStyle: 'italic',
-              }}
-            >
+            <div style={{ fontSize: '0.82rem', color: '#e2e8f0', lineHeight: 1.5, fontStyle: 'italic' }}>
               "{latestThought}"
             </div>
           </div>
@@ -621,17 +442,17 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
       {showLogs && (
         <div
           style={{
-            borderRadius: 'var(--radius-md)',
+            borderRadius: 'var(--radius-sm)',
             overflow: 'hidden',
             border: '1px solid var(--border-default)',
             background: 'var(--bg-input)',
-            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.6)',
+            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.7)',
           }}
         >
           <div
             style={{
-              padding: '0.55rem 0.95rem',
-              background: 'rgba(15, 23, 42, 0.8)',
+              padding: '0.5rem 0.9rem',
+              background: 'rgba(14, 15, 20, 0.9)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
               display: 'flex',
               alignItems: 'center',
@@ -639,10 +460,10 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <Terminal size={13} color="var(--accent-cyan-bright)" />
+              <Terminal size={12} color="var(--accent-amber-bright)" />
               <span
                 style={{
-                  fontSize: '0.74rem',
+                  fontSize: '0.72rem',
                   fontFamily: 'var(--font-mono)',
                   color: 'var(--text-secondary)',
                   fontWeight: 600,
@@ -655,7 +476,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.7rem',
+                fontSize: '0.68rem',
                 color: 'var(--text-muted)',
               }}
             >
@@ -667,10 +488,10 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             ref={logContainerRef}
             style={{
               padding: '0.85rem 1rem',
-              maxHeight: '230px',
+              maxHeight: '220px',
               overflowY: 'auto',
               fontFamily: 'var(--font-mono)',
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
             }}
           >
             {events.length === 0 ? (
@@ -695,18 +516,18 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
-                      gap: '0.65rem',
-                      marginBottom: '0.4rem',
+                      gap: '0.6rem',
+                      marginBottom: '0.35rem',
                       lineHeight: 1.45,
                     }}
                   >
-                    <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem', flexShrink: 0 }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', flexShrink: 0 }}>
                       [{time}]
                     </span>
                     <span
                       style={{
                         color: badgeColor,
-                        fontSize: '0.72rem',
+                        fontSize: '0.7rem',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         minWidth: '78px',
