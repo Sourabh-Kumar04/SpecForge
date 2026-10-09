@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { TestResult } from '../types';
 import {
-  CheckCircle2,
   XCircle,
   Terminal,
-  Clock,
-  RotateCcw,
   ShieldCheck,
   ChevronDown,
   ChevronUp,
-  Cpu,
 } from 'lucide-react';
 
 interface TestReportPanelProps {
@@ -23,179 +19,366 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
   );
   const [showFullOutput, setShowFullOutput] = useState(true);
 
-  const displayedTest = testHistory.find(t => t.iteration === selectedIteration) || latestTest;
+  const displayedTest = testHistory.find((t) => t.iteration === selectedIteration) || latestTest;
 
   if (!displayedTest) {
     return null;
   }
 
   const isGreen = displayedTest.passed;
+  const passPercentage = displayedTest.total_tests > 0
+    ? Math.round((displayedTest.passed_tests / displayedTest.total_tests) * 100)
+    : (isGreen ? 100 : 0);
 
   return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: `2px solid ${isGreen ? '#22c55e' : 'rgba(239, 68, 68, 0.5)'}`,
-      borderRadius: '14px',
-      padding: '1.25rem',
-      marginBottom: '1.5rem',
-      boxShadow: isGreen ? '0 0 28px rgba(34, 197, 94, 0.22), 0 8px 24px rgba(0, 0, 0, 0.25)' : '0 8px 24px rgba(0, 0, 0, 0.25)',
-    }}>
+    <div
+      className="glass-panel"
+      style={{
+        padding: '1.5rem',
+        marginBottom: '1.75rem',
+        border: `1.5px solid ${isGreen ? 'var(--color-success)' : 'rgba(239, 68, 68, 0.45)'}`,
+        boxShadow: isGreen
+          ? '0 0 32px -4px rgba(34, 197, 94, 0.25), var(--shadow-md)'
+          : '0 0 24px -4px rgba(239, 68, 68, 0.2), var(--shadow-md)',
+      }}
+    >
       {/* Header with Verification Stamp */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '0.75rem',
-        marginBottom: '1.25rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            background: isGreen ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.15)',
-            border: `1px solid ${isGreen ? '#22c55e' : '#ef4444'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            {isGreen ? <CheckCircle2 size={22} color="#4ade80" /> : <XCircle size={22} color="#f87171" />}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1.25rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              background: isGreen ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+              border: `1px solid ${isGreen ? 'var(--color-success)' : 'var(--color-error)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: isGreen ? '0 0 16px rgba(34, 197, 94, 0.35)' : 'none',
+              flexShrink: 0,
+            }}
+          >
+            {isGreen ? (
+              <ShieldCheck size={26} color="var(--color-success-bright)" />
+            ) : (
+              <XCircle size={26} color="var(--color-error-bright)" />
+            )}
           </div>
+
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                 Sandbox Test Verification Report
               </h3>
+
               {isGreen ? (
-                <span className="badge badge-green" style={{
-                  fontSize: '0.85rem',
-                  padding: '3px 10px',
-                  fontWeight: 800,
-                  background: 'rgba(34, 197, 94, 0.25)',
-                  border: '1px solid #4ade80',
-                  color: '#86efac',
-                  letterSpacing: '0.02em',
-                }}>
-                  VERIFIED ✓ ({displayedTest.passed_tests}/{displayedTest.total_tests} tests passed, {testHistory.length || 1} iteration{(testHistory.length || 1) === 1 ? '' : 's'})
+                <span
+                  className="badge badge-green"
+                  style={{
+                    fontSize: '0.82rem',
+                    padding: '0.25rem 0.75rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  PROVABLY VERIFIED ✓ ({displayedTest.passed_tests}/{displayedTest.total_tests} passed)
                 </span>
               ) : (
-                <span className="badge badge-red" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                  TEST FAILURES DETECTED ({displayedTest.failed_tests} failed)
+                <span
+                  className="badge badge-red"
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '0.25rem 0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  FAILURES DETECTED ({displayedTest.failed_tests} failed)
                 </span>
               )}
             </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Execution verified in isolated sandbox with strict assertion boundaries
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+              Autonomous assertions executed inside isolated sandbox with strict exit code bounds
             </p>
           </div>
         </div>
 
         {/* Iteration Selector Pill Tabs */}
         {testHistory.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-main)', padding: '0.2rem', borderRadius: '8px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0 0.4rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: 'rgba(10, 13, 20, 0.8)',
+              padding: '0.25rem 0.4rem',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-default)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)',
+                padding: '0 0.4rem',
+                fontWeight: 600,
+              }}
+            >
               Iteration:
             </span>
             {testHistory.map((t) => (
               <button
+                type="button"
                 key={t.iteration}
                 onClick={() => setSelectedIteration(t.iteration)}
                 style={{
-                  padding: '0.25rem 0.55rem',
-                  borderRadius: '6px',
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  background: selectedIteration === t.iteration ? (t.passed ? '#15803d' : '#991b1b') : 'transparent',
-                  color: selectedIteration === t.iteration ? '#ffffff' : 'var(--text-muted)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
+                  background:
+                    selectedIteration === t.iteration
+                      ? t.passed
+                        ? 'rgba(34, 197, 94, 0.3)'
+                        : 'rgba(239, 68, 68, 0.3)'
+                      : 'transparent',
+                  color:
+                    selectedIteration === t.iteration
+                      ? t.passed
+                        ? 'var(--color-success-bright)'
+                        : 'var(--color-error-bright)'
+                      : 'var(--text-muted)',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
                 }}
               >
-                #{t.iteration} {t.passed ? '✓' : '✗'}
+                <span>#{t.iteration}</span>
+                <span>{t.passed ? '✓' : '✗'}</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
+      {/* Progress Bar */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.74rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '0.35rem',
+          }}
+        >
+          <span>Assertion Pass Rate</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: isGreen ? 'var(--color-success-bright)' : '#cbd5e1' }}>
+            {passPercentage}%
+          </span>
+        </div>
+        <div
+          style={{
+            height: '6px',
+            borderRadius: 'var(--radius-full)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${passPercentage}%`,
+              background: isGreen
+                ? 'linear-gradient(90deg, #10b981, #22c55e)'
+                : 'linear-gradient(90deg, #ef4444, #f59e0b)',
+              boxShadow: isGreen ? '0 0 12px rgba(34, 197, 94, 0.6)' : 'none',
+              transition: 'width 0.4s ease',
+            }}
+          />
+        </div>
+      </div>
+
       {/* Metrics Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-        gap: '0.75rem',
-        marginBottom: '1rem',
-      }}>
-        <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Total Tests</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>{displayedTest.total_tests}</div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '0.75rem',
+          marginBottom: '1.25rem',
+        }}
+      >
+        <div
+          style={{
+            background: 'rgba(10, 13, 20, 0.6)',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+            Total Tests
+          </div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
+            {displayedTest.total_tests}
+          </div>
         </div>
 
-        <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Passed</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#4ade80' }}>{displayedTest.passed_tests}</div>
+        <div
+          style={{
+            background: 'rgba(10, 13, 20, 0.6)',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+            Passed
+          </div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-success-bright)', fontFamily: 'var(--font-mono)' }}>
+            {displayedTest.passed_tests}
+          </div>
         </div>
 
-        <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Failed</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: displayedTest.failed_tests > 0 ? '#f87171' : 'var(--text-muted)' }}>
+        <div
+          style={{
+            background: 'rgba(10, 13, 20, 0.6)',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+            Failed
+          </div>
+          <div
+            style={{
+              fontSize: '1.35rem',
+              fontWeight: 800,
+              color: displayedTest.failed_tests > 0 ? 'var(--color-error-bright)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             {displayedTest.failed_tests}
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Execution Time</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>{displayedTest.duration_seconds}s</div>
+        <div
+          style={{
+            background: 'rgba(10, 13, 20, 0.6)',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+            Execution Time
+          </div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-cyan-bright)', fontFamily: 'var(--font-mono)' }}>
+            {displayedTest.duration_seconds}s
+          </div>
         </div>
 
-        <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Sandbox Isolation</div>
-          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#c084fc', textTransform: 'capitalize', marginTop: '0.25rem' }}>
-            {displayedTest.runner} Engine
+        <div
+          style={{
+            background: 'rgba(10, 13, 20, 0.6)',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+            Runner Sandbox
+          </div>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              color: 'var(--accent-violet-bright)',
+              textTransform: 'capitalize',
+              marginTop: '0.35rem',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {displayedTest.runner}
           </div>
         </div>
       </div>
 
-      {/* Test Output Terminal */}
-      <div style={{
-        background: '#090d16',
-        borderRadius: '8px',
-        border: '1px solid #1e293b',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          padding: '0.5rem 0.85rem',
-          background: '#0f172a',
-          borderBottom: '1px solid #1e293b',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-            <Terminal size={13} />
-            <span>Sandbox Runner Stdout / Pytest Log</span>
+      {/* Pytest Output Console */}
+      <div
+        style={{
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--border-default)',
+          background: 'var(--bg-input)',
+          overflow: 'hidden',
+          boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.6)',
+        }}
+      >
+        <div
+          style={{
+            padding: '0.55rem 0.95rem',
+            background: 'rgba(15, 23, 42, 0.85)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.74rem', color: '#94a3b8' }}>
+            <Terminal size={13} color="var(--accent-cyan-bright)" />
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              PYTEST STDOUT & TEST HARNESS LOGS
+            </span>
           </div>
 
           <button
+            type="button"
             onClick={() => setShowFullOutput(!showFullOutput)}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '0.72rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              fontWeight: 600,
+            }}
           >
-            {showFullOutput ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            <span>{showFullOutput ? 'Collapse' : 'Expand'}</span>
+            {showFullOutput ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            <span>{showFullOutput ? 'Collapse Output' : 'Expand Output'}</span>
           </button>
         </div>
 
         {showFullOutput && (
-          <div style={{
-            padding: '0.85rem 1rem',
-            maxHeight: '260px',
-            overflowY: 'auto',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '0.78rem',
-            lineHeight: 1.45,
-            color: '#e2e8f0',
-            whiteSpace: 'pre-wrap',
-          }}>
+          <div
+            style={{
+              padding: '1rem',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.78rem',
+              lineHeight: 1.5,
+              color: '#cbd5e1',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
             {displayedTest.output || 'No test log output captured.'}
           </div>
         )}
@@ -203,3 +386,5 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
     </div>
   );
 };
+
+export default TestReportPanel;

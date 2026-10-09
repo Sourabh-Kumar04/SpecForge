@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AgentEvent, JobStatus, ResearchDoc } from '../types';
 import {
   CheckCircle2,
-  AlertCircle,
   RefreshCw,
   Search,
-  Code,
+  Code2,
   FlaskConical,
   Wrench,
   Bot,
@@ -13,7 +12,9 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  BookOpen,
+  ShieldCheck,
+  Check,
+  Radio,
 } from 'lucide-react';
 
 interface AgentTimelineProps {
@@ -32,37 +33,41 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
   researchNotes = [],
 }) => {
   const [showLogs, setShowLogs] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(true);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (logContainerRef.current) {
+    if (autoScroll && logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
-  }, [events]);
+  }, [events, autoScroll]);
 
   const isResearchDisabled = enableResearch === false;
+
   const stages = [
-    { key: 'planning', label: '1. Nemotron Architecture', icon: Bot },
+    { key: 'planning', label: '1. Architecture Plan', icon: Bot, desc: 'Nemotron reasoning' },
     {
       key: 'researching',
-      label: isResearchDisabled ? '2. Tavily Docs (Disabled)' : '2. Tavily Docs Grounding',
+      label: isResearchDisabled ? '2. Docs (Skipped)' : '2. Tavily Grounding',
       icon: Search,
+      desc: isResearchDisabled ? 'Grounding disabled' : 'Live API signatures',
     },
-    { key: 'coding', label: '3. Synthesis & Code Generation', icon: Code },
-    { key: 'testing', label: '4. Sandbox Execution', icon: FlaskConical },
-    { key: 'fixing', label: '5. Autonomous Fixer Loop', icon: Wrench },
-    { key: 'completed', label: '6. VERIFIED ✓ (Tests Passed)', icon: CheckCircle2 },
+    { key: 'coding', label: '3. Code Synthesis', icon: Code2, desc: 'Multi-file generation' },
+    { key: 'testing', label: '4. Sandbox Execution', icon: FlaskConical, desc: 'Pytest assertions' },
+    { key: 'fixing', label: '5. Fixer Loop', icon: Wrench, desc: 'Autonomous bugfix' },
+    { key: 'completed', label: '6. VERIFIED ✓', icon: CheckCircle2, desc: '100% tests green' },
   ];
 
-  const getStageState = (stageKey: string) => {
+  const getStageState = (stageKey: string): 'pending' | 'current' | 'completed' | 'skipped' | 'failed' => {
     if (stageKey === 'researching' && isResearchDisabled) {
       return 'skipped';
     }
     if (status === 'completed') return 'completed';
-    if (status === 'failed' && stageKey === 'fixing') return 'failed';
+    if (status === 'failed' && (stageKey === 'fixing' || stageKey === 'testing')) return 'failed';
 
     const order = ['planning', 'researching', 'coding', 'testing', 'fixing', 'completed'];
-    const currentIndex = order.indexOf(status === 'awaiting_plan_approval' ? 'planning' : status);
+    const currentCanonical = status === 'awaiting_plan_approval' ? 'planning' : status;
+    const currentIndex = order.indexOf(currentCanonical);
     const targetIndex = order.indexOf(stageKey);
 
     if (currentIndex === targetIndex) return 'current';
@@ -70,100 +75,171 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
     return 'pending';
   };
 
+  const getStageColor = (ev: AgentEvent) => {
+    const stage = ev.stage?.toLowerCase() || '';
+    const type = ev.event_type;
+    if (type === 'error') return '#ef4444';
+    if (type === 'thought') return '#c084fc';
+    if (type === 'test_run') return ev.data?.passed ? '#4ade80' : '#f87171';
+    if (stage.includes('research')) return '#06b6d4';
+    if (stage.includes('plan')) return '#818cf8';
+    if (stage.includes('code') || stage.includes('synth')) return '#38bdf8';
+    if (stage.includes('test') || stage.includes('sandbox')) return '#fbbf24';
+    if (stage.includes('fix')) return '#f43f5e';
+    return '#94a3b8';
+  };
+
   return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '14px',
-      padding: '1.25rem',
-      marginBottom: '1.5rem',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: status === 'completed' ? '#4ade80' : (status === 'failed' ? '#ef4444' : '#38bdf8'),
-            boxShadow: `0 0 10px ${status === 'completed' ? '#4ade80' : '#38bdf8'}`,
-          }} />
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+    <div
+      className="glass-panel"
+      style={{
+        padding: '1.5rem',
+        marginBottom: '1.75rem',
+        position: 'relative',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.25rem',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div
+            className="pulse-dot"
+            style={{
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              background:
+                status === 'completed'
+                  ? 'var(--color-success-bright)'
+                  : status === 'failed'
+                  ? 'var(--color-error-bright)'
+                  : 'var(--accent-cyan-bright)',
+              boxShadow: `0 0 10px ${
+                status === 'completed' ? 'var(--color-success)' : 'var(--accent-cyan)'
+              }`,
+            }}
+          />
+          <h3
+            style={{
+              fontSize: '1rem',
+              fontWeight: 800,
+              color: '#ffffff',
+              letterSpacing: '-0.02em',
+            }}
+          >
             Live Agentic Synthesis Pipeline
           </h3>
-          <span className="badge badge-slate" style={{ fontSize: '0.72rem' }}>
-            SSE Real-Time Stream
-          </span>
-          <span className="badge" style={{
-            background: 'rgba(6, 182, 212, 0.15)',
-            color: '#38bdf8',
-            border: '1px solid rgba(6, 182, 212, 0.3)',
-            fontSize: '0.68rem',
-            padding: '1px 6px',
-            borderRadius: '4px',
-            fontWeight: 600,
-          }}>
-            Tavily Research Grounding
+          <span
+            className="badge badge-slate"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.7rem',
+              gap: '0.35rem',
+            }}
+          >
+            <Radio size={11} color="var(--accent-cyan-bright)" />
+            SSE Stream Active
           </span>
         </div>
 
-        <button
-          onClick={() => setShowLogs(!showLogs)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem',
-            fontSize: '0.8rem',
-          }}
-        >
-          {showLogs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          <span>{showLogs ? 'Collapse Stream' : 'Expand Stream'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setAutoScroll(!autoScroll)}
+            style={{
+              background: autoScroll ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+              border: `1px solid ${autoScroll ? 'rgba(6, 182, 212, 0.35)' : 'var(--border-subtle)'}`,
+              color: autoScroll ? 'var(--accent-cyan-bright)' : 'var(--text-muted)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Auto-scroll: {autoScroll ? 'ON' : 'OFF'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowLogs(!showLogs)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.25rem 0.6rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {showLogs ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            <span>{showLogs ? 'Collapse Feed' : 'Expand Feed'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Stage Flow Indicator */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-        gap: '0.5rem',
-        marginBottom: '1rem',
-      }}>
+      {/* Animated Pipeline Stage Flow Track */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '0.65rem',
+          marginBottom: '1.25rem',
+          position: 'relative',
+        }}
+      >
         {stages.map((st) => {
           const state = getStageState(st.key);
           const Icon = st.icon;
 
-          let color = 'var(--text-muted)';
-          let bg = 'rgba(255, 255, 255, 0.02)';
-          let border = 'var(--border)';
+          let borderColor = 'var(--border-subtle)';
+          let bgColor = 'rgba(255, 255, 255, 0.02)';
+          let iconColor = 'var(--text-muted)';
+          let textColor = 'var(--text-muted)';
           let boxShadow = 'none';
 
           if (state === 'skipped') {
-            color = '#64748b';
-            bg = 'rgba(15, 23, 42, 0.4)';
-            border = 'dashed 1px #475569';
+            borderColor = 'rgba(100, 116, 139, 0.25)';
+            bgColor = 'rgba(15, 23, 42, 0.3)';
+            iconColor = 'var(--text-dim)';
+            textColor = 'var(--text-dim)';
           } else if (state === 'current') {
-            color = '#38bdf8';
-            bg = 'rgba(6, 182, 212, 0.1)';
-            border = '#06b6d4';
-            boxShadow = '0 0 12px rgba(6, 182, 212, 0.25)';
+            borderColor = 'var(--accent-cyan)';
+            bgColor = 'linear-gradient(145deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 24, 40, 0.9) 100%)';
+            iconColor = 'var(--accent-cyan-bright)';
+            textColor = '#ffffff';
+            boxShadow = '0 0 16px -2px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6, 182, 212, 0.4)';
           } else if (state === 'completed') {
-            color = '#84cc16';
-            bg = 'rgba(118, 185, 0, 0.08)';
-            border = 'rgba(118, 185, 0, 0.3)';
+            borderColor = st.key === 'completed' ? 'var(--color-success)' : 'rgba(34, 197, 94, 0.4)';
+            bgColor =
+              st.key === 'completed'
+                ? 'linear-gradient(145deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 32, 24, 0.9) 100%)'
+                : 'rgba(34, 197, 94, 0.08)';
+            iconColor = 'var(--color-success-bright)';
+            textColor = st.key === 'completed' ? 'var(--color-success-bright)' : '#e2e8f0';
             if (st.key === 'completed') {
-              color = '#4ade80';
-              bg = 'rgba(34, 197, 94, 0.18)';
-              border = '#22c55e';
-              boxShadow = '0 0 16px rgba(34, 197, 94, 0.4)';
+              boxShadow = '0 0 20px -2px rgba(34, 197, 94, 0.45)';
             }
           } else if (state === 'failed') {
-            color = '#f87171';
-            bg = 'rgba(239, 68, 68, 0.1)';
-            border = 'rgba(239, 68, 68, 0.4)';
+            borderColor = 'var(--color-error)';
+            bgColor = 'rgba(239, 68, 68, 0.12)';
+            iconColor = 'var(--color-error-bright)';
+            textColor = 'var(--color-error-bright)';
           }
 
           return (
@@ -171,156 +247,277 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               key={st.key}
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.55rem 0.75rem',
-                borderRadius: '8px',
-                background: bg,
-                border: border.startsWith('dashed') ? border : `1px solid ${border}`,
+                flexDirection: 'column',
+                gap: '0.35rem',
+                padding: '0.75rem 0.85rem',
+                borderRadius: 'var(--radius-md)',
+                background: bgColor,
+                border: `1px solid ${borderColor}`,
                 boxShadow: boxShadow,
-                transition: 'all 0.2s ease',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative',
               }}
             >
-              {state === 'current' ? (
-                <RefreshCw size={14} color={color} className="animate-spin" />
-              ) : (
-                <Icon size={14} color={color} />
-              )}
-              <span style={{ fontSize: '0.74rem', fontWeight: 600, color: color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {st.label}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  {state === 'current' ? (
+                    <RefreshCw size={14} color={iconColor} className="animate-spin" />
+                  ) : state === 'completed' ? (
+                    <Check size={14} color={iconColor} strokeWidth={3} />
+                  ) : (
+                    <Icon size={14} color={iconColor} />
+                  )}
+                  <span
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      color: textColor,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {st.label}
+                  </span>
+                </div>
+
+                {state === 'current' && (
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: 'var(--accent-cyan-bright)',
+                      boxShadow: '0 0 6px var(--accent-cyan)',
+                    }}
+                  />
+                )}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '0.68rem',
+                  color: state === 'current' ? 'var(--accent-cyan-bright)' : 'var(--text-muted)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {st.desc}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Test Verification Step Dominance Banner */}
+      {/* Dominant Verification Banner (Testing / Fixing / Completed) */}
       {(status === 'completed' || status === 'testing' || status === 'fixing') && (
-        <div style={{
-          background: status === 'completed'
-            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.08) 100%)'
-            : (status === 'fixing' ? 'rgba(234, 179, 8, 0.12)' : 'rgba(56, 189, 248, 0.12)'),
-          border: `2px solid ${status === 'completed' ? '#22c55e' : (status === 'fixing' ? '#eab308' : '#38bdf8')}`,
-          borderRadius: '10px',
-          padding: '0.9rem 1.25rem',
-          marginBottom: '0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          boxShadow: status === 'completed' ? '0 0 24px rgba(34, 197, 94, 0.25)' : 'none',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {status === 'completed' ? (
-              <CheckCircle2 size={24} color="#4ade80" />
-            ) : status === 'fixing' ? (
-              <Wrench size={22} color="#facc15" className="animate-spin" />
-            ) : (
-              <FlaskConical size={22} color="#38bdf8" />
-            )}
+        <div
+          style={{
+            background:
+              status === 'completed'
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.08) 100%)'
+                : status === 'fixing'
+                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)'
+                : 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 165, 233, 0.05) 100%)',
+            border: `1.5px solid ${
+              status === 'completed'
+                ? 'var(--color-success)'
+                : status === 'fixing'
+                ? 'var(--color-warning)'
+                : 'var(--accent-cyan)'
+            }`,
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.35rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            boxShadow:
+              status === 'completed'
+                ? '0 0 28px -2px rgba(34, 197, 94, 0.3)'
+                : '0 0 20px -4px rgba(6, 182, 212, 0.25)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background:
+                  status === 'completed'
+                    ? 'rgba(34, 197, 94, 0.25)'
+                    : status === 'fixing'
+                    ? 'rgba(245, 158, 11, 0.25)'
+                    : 'rgba(6, 182, 212, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {status === 'completed' ? (
+                <ShieldCheck size={24} color="var(--color-success-bright)" />
+              ) : status === 'fixing' ? (
+                <Wrench size={22} color="var(--color-warning-bright)" className="animate-spin" />
+              ) : (
+                <FlaskConical size={22} color="var(--accent-cyan-bright)" className="animate-spin" />
+              )}
+            </div>
+
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  fontSize: '0.95rem',
-                  fontWeight: 800,
-                  color: status === 'completed' ? '#4ade80' : (status === 'fixing' ? '#facc15' : '#38bdf8'),
-                  letterSpacing: '0.02em',
-                }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    color:
+                      status === 'completed'
+                        ? 'var(--color-success-bright)'
+                        : status === 'fixing'
+                        ? 'var(--color-warning-bright)'
+                        : 'var(--accent-cyan-bright)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
                   {status === 'completed'
-                    ? 'VERIFIED ✓ TEST REPORT'
-                    : (status === 'fixing' ? 'AUTONOMOUS FIXER REASONING' : 'SANDBOX EXECUTION IN PROGRESS')}
+                    ? 'VERIFIED ✓ TEST REPORT PASSED'
+                    : status === 'fixing'
+                    ? 'AUTONOMOUS FIXER LOOP RUNNING'
+                    : 'ISOLATED SANDBOX EXECUTION IN PROGRESS'}
                 </span>
-                <span className={`badge ${status === 'completed' ? 'badge-green' : (status === 'fixing' ? 'badge-amber' : 'badge-nebius')}`} style={{ fontSize: '0.72rem' }}>
-                  {status === 'completed' ? '100% Verified Green' : (status === 'fixing' ? 'Auto-Patching Code' : 'Isolated Runner')}
+
+                <span
+                  className={`badge ${
+                    status === 'completed'
+                      ? 'badge-green'
+                      : status === 'fixing'
+                      ? 'badge-amber'
+                      : 'badge-cyan'
+                  }`}
+                  style={{ fontSize: '0.72rem' }}
+                >
+                  {status === 'completed'
+                    ? '100% Green Assertions'
+                    : status === 'fixing'
+                    ? 'Auto-Patching Codebase'
+                    : 'Isolated Pytest Runner'}
                 </span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+
+              <p style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', margin: 0 }}>
                 {status === 'completed'
-                  ? 'All unit & integration assertions successfully executed and passed within the isolated test sandbox.'
-                  : (status === 'fixing'
-                    ? 'Nemotron reasoning engine analyzing failure traces and synthesizing targeted bugfixes.'
-                    : 'Executing test runner inside containerized sandbox environment with strict timeout limits.')}
-              </div>
+                  ? 'All unit & integration assertions successfully executed in isolated container. Zero hallucinations.'
+                  : status === 'fixing'
+                  ? 'NVIDIA Nemotron reasoning engine analyzing test failure output to synthesize targeted bugfixes.'
+                  : 'Executing code test harness in isolated subprocess with strict assertion boundaries.'}
+              </p>
             </div>
           </div>
+
           {status === 'completed' && (
-            <span style={{
-              background: '#22c55e',
-              color: '#052e16',
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              letterSpacing: '0.04em',
-              whiteSpace: 'nowrap',
-            }}>
+            <div
+              style={{
+                background: 'var(--color-success)',
+                color: '#052e16',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                padding: '0.35rem 0.85rem',
+                borderRadius: 'var(--radius-sm)',
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 0 14px rgba(34, 197, 94, 0.5)',
+              }}
+            >
               VERIFIED ✓
-            </span>
+            </div>
           )}
         </div>
       )}
 
-      {/* Live Researching Indicator Banner */}
+      {/* Live Researching Notification Banner */}
       {status === 'researching' && (
-        <div style={{
-          background: 'rgba(6, 182, 212, 0.08)',
-          border: '1px solid rgba(6, 182, 212, 0.35)',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '0.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-        }}>
-          <RefreshCw size={16} color="#38bdf8" className="animate-spin" />
+        <div
+          style={{
+            background: 'rgba(6, 182, 212, 0.1)',
+            border: '1px solid rgba(6, 182, 212, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.85rem 1.15rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}
+        >
+          <RefreshCw size={17} color="var(--accent-cyan-bright)" className="animate-spin" />
           <div style={{ fontSize: '0.84rem', color: '#e0f2fe' }}>
-            <strong>Tavily Search API active:</strong> Grounding architecture specification against latest production documentation and API signatures in real-time...
+            <strong style={{ color: 'var(--accent-cyan-bright)' }}>Tavily AI Search active:</strong>{' '}
+            Retrieving latest live API documentation and official library schemas to ground generation...
           </div>
         </div>
       )}
 
-      {/* Tavily Research Grounding Results Card */}
+      {/* Tavily Grounded Research Notes Card */}
       {researchNotes && researchNotes.length > 0 && (
-        <div style={{
-          background: 'rgba(6, 182, 212, 0.06)',
-          border: '1px solid rgba(6, 182, 212, 0.25)',
-          borderRadius: '10px',
-          padding: '0.85rem 1.1rem',
-          marginBottom: '0.85rem',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Search size={15} color="#38bdf8" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff' }}>
+        <div
+          style={{
+            background: 'rgba(6, 182, 212, 0.05)',
+            border: '1px solid rgba(6, 182, 212, 0.22)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.75rem',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+              <Search size={15} color="var(--accent-cyan-bright)" />
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
                 Tavily Live Grounded Research
               </span>
-              <span style={{
-                background: 'rgba(6, 182, 212, 0.2)',
-                color: '#38bdf8',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-                fontSize: '0.68rem',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 600,
-              }}>
+              <span className="badge badge-cyan" style={{ fontSize: '0.68rem' }}>
                 Best Use of Tavily Prize Track ($3k)
               </span>
             </div>
-            <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
               {researchNotes.length} documentation source{researchNotes.length > 1 ? 's' : ''} grounded
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.6rem' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+              gap: '0.75rem',
+            }}
+          >
             {researchNotes.map((doc, idx) => (
-              <div key={idx} style={{
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: '1px solid rgba(51, 65, 85, 0.6)',
-                borderRadius: '8px',
-                padding: '0.65rem 0.85rem',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8' }}>
+              <div
+                key={idx}
+                style={{
+                  background: 'rgba(10, 14, 22, 0.8)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.75rem 0.9rem',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem',
+                    marginBottom: '0.35rem',
+                  }}
+                >
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent-cyan-bright)' }}>
                     {doc.title}
                   </span>
                   {doc.url && (
@@ -328,27 +525,46 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                       href={doc.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#94a3b8', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                      title="Open documentation link"
+                      style={{
+                        color: 'var(--text-muted)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                      }}
+                      title="View grounded documentation source"
                     >
-                      <ExternalLink size={12} />
+                      <ExternalLink size={13} />
                     </a>
                   )}
                 </div>
-                <p style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: 1.4, marginBottom: '0.35rem' }}>
+
+                <p
+                  style={{
+                    fontSize: '0.76rem',
+                    color: '#cbd5e1',
+                    lineHeight: 1.45,
+                    marginBottom: '0.45rem',
+                    margin: 0,
+                  }}
+                >
                   {doc.summary}
                 </p>
+
                 {doc.key_apis && doc.key_apis.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.4rem' }}>
                     {doc.key_apis.map((api, kIdx) => (
-                      <span key={kIdx} style={{
-                        fontSize: '0.66rem',
-                        fontFamily: 'monospace',
-                        background: 'rgba(6, 182, 212, 0.15)',
-                        color: '#7dd3fc',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                      }}>
+                      <span
+                        key={kIdx}
+                        style={{
+                          fontSize: '0.68rem',
+                          fontFamily: 'var(--font-mono)',
+                          background: 'rgba(6, 182, 212, 0.15)',
+                          color: '#7dd3fc',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          border: '1px solid rgba(6, 182, 212, 0.25)',
+                        }}
+                      >
                         {api}
                       </span>
                     ))}
@@ -360,84 +576,157 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
         </div>
       )}
 
-      {/* Latest Agent Thought Bubble */}
+      {/* Nemotron Internal Thought Bubble */}
       {latestThought && (
-        <div style={{
-          background: 'rgba(139, 92, 246, 0.08)',
-          border: '1px solid rgba(139, 92, 246, 0.25)',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '0.75rem',
-          display: 'flex',
-          gap: '0.6rem',
-        }}>
-          <Bot size={18} color="#c084fc" style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div
+          style={{
+            background: 'rgba(139, 92, 246, 0.08)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.85rem 1.15rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            gap: '0.75rem',
+          }}
+        >
+          <Bot size={18} color="var(--accent-violet-bright)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: 'var(--accent-violet-bright)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginBottom: '0.25rem',
+              }}
+            >
               Nemotron Reasoning Trace (Internal Thinking)
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#e2e8f0', lineHeight: 1.45, fontStyle: 'italic' }}>
+            <div
+              style={{
+                fontSize: '0.84rem',
+                color: '#e2e8f0',
+                lineHeight: 1.5,
+                fontStyle: 'italic',
+              }}
+            >
               "{latestThought}"
             </div>
           </div>
         </div>
       )}
 
-      {/* Live SSE Logs Stream */}
+      {/* Streaming Event Feed Console */}
       {showLogs && (
         <div
-          ref={logContainerRef}
           style={{
-            background: 'var(--bg-main)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            maxHeight: '220px',
-            overflowY: 'auto',
-            fontSize: '0.8rem',
-            fontFamily: 'JetBrains Mono, monospace',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            border: '1px solid var(--border-default)',
+            background: 'var(--bg-input)',
+            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.6)',
           }}
         >
-          {events.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
-              Waiting for agent pipeline events...
+          <div
+            style={{
+              padding: '0.55rem 0.95rem',
+              background: 'rgba(15, 23, 42, 0.8)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <Terminal size={13} color="var(--accent-cyan-bright)" />
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 600,
+                }}
+              >
+                LIVE SSE EVENT STREAM
+              </span>
             </div>
-          ) : (
-            events.map((ev) => {
-              const time = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : '';
-              let badgeColor = '#94a3b8';
-              if (ev.stage === 'researcher') badgeColor = '#06b6d4';
-              else if (ev.event_type === 'action') badgeColor = '#38bdf8';
-              else if (ev.event_type === 'file_written') badgeColor = '#84cc16';
-              else if (ev.event_type === 'test_run') badgeColor = ev.data?.passed ? '#4ade80' : '#f87171';
-              else if (ev.event_type === 'error') badgeColor = '#ef4444';
-              else if (ev.event_type === 'thought') badgeColor = '#c084fc';
 
-              return (
-                <div key={ev.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', marginBottom: '0.35rem', lineHeight: 1.4 }}>
-                  <span style={{ color: '#475569', fontSize: '0.72rem', flexShrink: 0 }}>
-                    [{time}]
-                  </span>
-                  <span style={{
-                    color: badgeColor,
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    minWidth: '70px',
-                    flexShrink: 0,
-                  }}>
-                    {ev.stage}:
-                  </span>
-                  <span style={{ color: '#cbd5e1', wordBreak: 'break-word' }}>
-                    {ev.message}
-                  </span>
-                </div>
-              );
-            })
-          )}
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.7rem',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {events.length} event{events.length === 1 ? '' : 's'} recorded
+            </span>
+          </div>
+
+          <div
+            ref={logContainerRef}
+            style={{
+              padding: '0.85rem 1rem',
+              maxHeight: '230px',
+              overflowY: 'auto',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.8rem',
+            }}
+          >
+            {events.length === 0 ? (
+              <div
+                style={{
+                  color: 'var(--text-muted)',
+                  textAlign: 'center',
+                  padding: '1.25rem',
+                  fontStyle: 'italic',
+                }}
+              >
+                Waiting for agent pipeline events...
+              </div>
+            ) : (
+              events.map((ev) => {
+                const time = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : '';
+                const badgeColor = getStageColor(ev);
+
+                return (
+                  <div
+                    key={ev.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.65rem',
+                      marginBottom: '0.4rem',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem', flexShrink: 0 }}>
+                      [{time}]
+                    </span>
+                    <span
+                      style={{
+                        color: badgeColor,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        minWidth: '78px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {ev.stage}:
+                    </span>
+                    <span style={{ color: '#cbd5e1', wordBreak: 'break-word' }}>
+                      {ev.message}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
+export default AgentTimeline;
