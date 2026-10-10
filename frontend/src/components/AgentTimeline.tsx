@@ -360,9 +360,9 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             }}
           >
             {researchNotes.map((doc, idx) => {
-              const relPercent = doc.relevance
-                ? Math.round(doc.relevance > 1 ? doc.relevance : doc.relevance * 100)
-                : 92;
+              const relevanceScore = doc.relevance == null
+                ? null
+                : (doc.relevance > 1 ? doc.relevance / 100 : doc.relevance);
               const isLiveDoc = doc.source === 'tavily_live' || (!doc.source && Boolean(doc.url && !doc.url.includes('python.org')));
 
               return (
@@ -419,21 +419,23 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                       </span>
                     </div>
 
-                    <span
-                      style={{
-                        fontSize: '0.66rem',
-                        fontFamily: 'var(--font-mono)',
-                        color: 'var(--accent-amber-bright)',
-                        background: 'rgba(255, 107, 26, 0.1)',
-                        padding: '1px 5px',
-                        borderRadius: '2px',
-                        border: '1px solid rgba(255, 107, 26, 0.25)',
-                        flexShrink: 0,
-                      }}
-                      title="Estimated relevance to target spec"
-                    >
-                      {relPercent}% match
-                    </span>
+                    {relevanceScore !== null && (
+                      <span
+                        style={{
+                          fontSize: '0.66rem',
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--accent-amber-bright)',
+                          background: 'rgba(255, 107, 26, 0.1)',
+                          padding: '1px 5px',
+                          borderRadius: '2px',
+                          border: '1px solid rgba(255, 107, 26, 0.25)',
+                          flexShrink: 0,
+                        }}
+                        title="Tavily relevance score"
+                      >
+                        {Math.round(relevanceScore * 100)}% relevance
+                      </span>
+                    )}
                   </div>
 
                   {/* Title & Link */}

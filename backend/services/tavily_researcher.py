@@ -93,7 +93,7 @@ class TavilyResearcher:
                         url = first_result.get("url")
                         summary = answer if answer else first_result.get("content", f"API guidelines for {query}")[:400]
                         score_raw = first_result.get("score")
-                        relevance = round(float(score_raw), 2) if score_raw is not None else 0.94
+                        relevance = round(float(score_raw), 2) if score_raw is not None else None
                         
                         return ResearchDoc(
                             query=query,
@@ -123,7 +123,7 @@ class TavilyResearcher:
                 title=item["title"],
                 summary=item["summary"],
                 key_apis=item["key_apis"],
-                relevance=0.88,
+                relevance=None,
                 source="offline_kb"
             )
 
@@ -133,7 +133,7 @@ class TavilyResearcher:
             title=f"Verified Specifications: {query}",
             summary=f"Official programming patterns and syntax requirements for {query}. Clean modular design with explicit types and test coverage.",
             key_apis=["std-lib", "pytest"],
-            relevance=0.75,
+            relevance=None,
             source="offline_kb"
         )
 
