@@ -153,6 +153,7 @@ export interface HealthInfo {
   };
   tavily_enabled: boolean;
   tavily_status?: 'live' | 'offline_kb_fallback';
+  llm_status?: 'live' | 'key_ready' | 'mock_configured' | 'mock_fallback';
 }
 
 export interface SettingsInfo {

@@ -169,7 +169,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className={`badge ${isLiveNebius ? 'badge-green' : 'badge-amber'}`}
                 style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
               >
-                {isLiveNebius ? 'REAL INFERENCE' : 'LOCAL MOCK MODE'}
+                {isLiveNebius ? 'API KEY CONFIGURED' : 'LOCAL MOCK MODE'}
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#8b949e', marginTop: '0.2rem', fontFamily: 'var(--font-mono)' }}>
@@ -186,7 +186,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className={`badge ${isLiveTavily ? 'badge-green' : 'badge-amber'}`}
                 style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
               >
-                {isLiveTavily ? 'LIVE WEB DOCS' : 'FALLBACK KNOWLEDGE BASE'}
+                {isLiveTavily ? 'API KEY CONFIGURED' : 'OFFLINE KNOWLEDGE BASE'}
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#8b949e', marginTop: '0.2rem', fontFamily: 'var(--font-mono)' }}>
@@ -217,7 +217,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}
             />
             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-              Enables NVIDIA Nemotron 3 Ultra and Super inference via Nebius AI Cloud.
+              Enables NVIDIA Nemotron inference when the key is active and the account has available budget.
             </p>
           </div>
 

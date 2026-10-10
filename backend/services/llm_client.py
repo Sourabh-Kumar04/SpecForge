@@ -110,6 +110,7 @@ class LLMClient:
 
     def __init__(self):
         self.is_mock = settings.effective_mock_llm
+        self.runtime_status = "mock_configured" if self.is_mock else "key_ready"
         self.fast_model = settings.nebius_model_fast
         self.reasoning_model = settings.nebius_model_reasoning
         self.client: Optional[OpenAI] = None
@@ -129,6 +130,7 @@ class LLMClient:
 
     def reload_settings(self):
         self.is_mock = settings.effective_mock_llm
+        self.runtime_status = "mock_configured" if self.is_mock else "key_ready"
         self.fast_model = settings.nebius_model_fast
         self.reasoning_model = settings.nebius_model_reasoning
         if not self.is_mock and settings.nebius_api_key:
@@ -175,6 +177,7 @@ class LLMClient:
         Handles the Nemotron gotcha where content may be empty and reasoning_content contains the answer.
         """
         if self.is_mock:
+            self.runtime_status = "mock_configured"
             res, reasoning = self._mock_completion(system_prompt, user_prompt, tier)
             self._record_mock_usage(system_prompt + " " + user_prompt, res + (reasoning or ""), tier)
             return res, reasoning
@@ -194,6 +197,7 @@ class LLMClient:
                 kwargs["reasoning_effort"] = reasoning_effort
 
             response = self.client.chat.completions.create(**kwargs)
+            self.runtime_status = "live"
             
             # Record token usage
             usage = getattr(response, "usage", None)
@@ -231,6 +235,7 @@ class LLMClient:
             return final_text, reasoning_content
 
         except Exception as e:
+            self.runtime_status = "mock_fallback"
             logger.error(f"Error calling Nebius API ({model_id}): {e}. Falling back to mock generator.")
             res, reasoning = self._mock_completion(system_prompt, user_prompt, tier)
             self._record_mock_usage(system_prompt + " " + user_prompt, res + (reasoning or ""), tier)

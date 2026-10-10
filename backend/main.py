@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from backend.config import settings
 from backend.routes import api_router
+from backend.services.llm_client import llm_client
 
 app = FastAPI(
     title="SpecForge API",
@@ -30,6 +31,7 @@ def health():
         "status": "healthy",
         "service": "SpecForge",
         "mock_mode": settings.effective_mock_llm,
+        "llm_status": llm_client.runtime_status,
         "models": {
             "fast": settings.nebius_model_fast,
             "reasoning": settings.nebius_model_reasoning,

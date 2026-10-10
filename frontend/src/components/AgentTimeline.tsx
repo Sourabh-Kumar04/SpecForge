@@ -26,6 +26,15 @@ interface AgentTimelineProps {
   researchNotes?: ResearchDoc[];
 }
 
+const getSourceHost = (url?: string): string | null => {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+};
+
 export const AgentTimeline: React.FC<AgentTimelineProps> = ({
   status,
   events,
@@ -33,6 +42,12 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
   enableResearch,
   researchNotes = [],
 }) => {
+  const liveResearchCount = researchNotes.filter((doc) => doc.source === 'tavily_live').length;
+  const researchAttribution = liveResearchCount === researchNotes.length
+    ? 'TAVILY LIVE SEARCH'
+    : liveResearchCount === 0
+      ? 'OFFLINE KNOWLEDGE BASE'
+      : 'LIVE SEARCH + OFFLINE FALLBACK';
   const [showLogs, setShowLogs] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -335,7 +350,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                   color: 'var(--accent-amber-bright)',
                 }}
               >
-                Grounded by Tavily AI Search
+                {researchAttribution}
               </span>
             </div>
 
@@ -363,7 +378,8 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               const relevanceScore = doc.relevance == null
                 ? null
                 : (doc.relevance > 1 ? doc.relevance / 100 : doc.relevance);
-              const isLiveDoc = doc.source === 'tavily_live' || (!doc.source && Boolean(doc.url && !doc.url.includes('python.org')));
+              const isLiveDoc = doc.source === 'tavily_live';
+              const sourceHost = getSourceHost(doc.url);
 
               return (
                 <div
@@ -393,15 +409,15 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                         style={{
                           fontSize: '0.65rem',
                           fontFamily: 'var(--font-mono)',
-                          color: '#34d399',
-                          background: 'rgba(16, 185, 129, 0.12)',
+                          color: isLiveDoc ? '#34d399' : '#cbd5e1',
+                          background: isLiveDoc ? 'rgba(16, 185, 129, 0.12)' : 'rgba(148, 163, 184, 0.1)',
                           padding: '1px 5px',
                           borderRadius: '2px',
-                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          border: isLiveDoc ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border-default)',
                           flexShrink: 0,
                         }}
                       >
-                        {isLiveDoc ? 'TAVILY LIVE' : 'GROUNDED KB'}
+                        {isLiveDoc ? 'TAVILY LIVE' : 'OFFLINE KB'}
                       </span>
                       <span
                         style={{
@@ -450,7 +466,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f1f5f9', lineHeight: 1.3 }}>
                       {doc.title}
                     </span>
-                    {doc.url && (
+                    {doc.url && sourceHost && (
                       <a
                         href={doc.url}
                         target="_blank"
@@ -460,12 +476,14 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.2rem',
-                          fontSize: '0.7rem',
+                          fontSize: '0.66rem',
                           textDecoration: 'none',
                           flexShrink: 0,
+                          fontFamily: 'var(--font-mono)',
                         }}
                         title={`Open source documentation: ${doc.url}`}
                       >
+                        {sourceHost}
                         <ExternalLink size={12} />
                       </a>
                     )}

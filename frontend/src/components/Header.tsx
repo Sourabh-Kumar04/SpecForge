@@ -10,7 +10,14 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettings, settings }) => {
-  const isLive = health ? !health.mock_mode : false;
+  const isLive = health ? health.llm_status === 'live' : false;
+  const llmStatusLabel = health?.llm_status === 'live'
+    ? 'NEBIUS LIVE'
+    : health?.llm_status === 'mock_fallback'
+      ? 'MOCK FALLBACK'
+      : health?.llm_status === 'key_ready'
+        ? 'NEBIUS KEY READY'
+        : 'SANDBOX MODE';
 
   const fastModelName = health?.models?.fast
     ? health.models.fast.split('/').pop() || health.models.fast
@@ -128,7 +135,15 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
             <div
               className={`badge ${isLive ? 'badge-green' : 'badge-amber'}`}
               style={{ padding: '0.3rem 0.65rem' }}
-              title={isLive ? 'Live Nebius inference' : 'Local deterministic test sandbox'}
+              title={
+                health.llm_status === 'live'
+                  ? 'Most recent generation call succeeded through Nebius Token Factory.'
+                  : health.llm_status === 'mock_fallback'
+                    ? 'Nebius call failed; generation is using the local mock fallback.'
+                    : health.llm_status === 'key_ready'
+                      ? 'Nebius key is configured; no successful inference call has been recorded yet.'
+                      : 'Local deterministic test sandbox.'
+              }
             >
               <div
                 className="pulse-ember"
@@ -139,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
                   background: isLive ? 'var(--color-success-bright)' : 'var(--accent-amber-bright)',
                 }}
               />
-              <span>{isLive ? 'NEBIUS LIVE' : 'SANDBOX MODE'}</span>
+              <span>{llmStatusLabel}</span>
             </div>
 
             {/* NVIDIA Models Telemetry */}

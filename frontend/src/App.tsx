@@ -141,6 +141,7 @@ export const App: React.FC = () => {
             if (fullJob.status === 'completed' || fullJob.status === 'failed') {
               setIsLoading(false);
               setIsRefining(false);
+              fetchHealth().then(setHealth).catch((err) => console.error('Failed to refresh health:', err));
             }
           });
         }
@@ -151,6 +152,7 @@ export const App: React.FC = () => {
           setCurrentJob(fullJob);
           setIsLoading(false);
           setIsRefining(false);
+          fetchHealth().then(setHealth).catch((err) => console.error('Failed to refresh health:', err));
         });
       },
       (err) => {
