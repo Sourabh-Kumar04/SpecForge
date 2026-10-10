@@ -10,7 +10,7 @@ SpecForge runs as a self-contained, unified container architecture:
 1. **Frontend**: High-performance React 19 + TypeScript SPA built with Vite.
 2. **Backend**: FastAPI 0.110+ ASGI service powered by NVIDIA Nemotron-3 (Super 120B & Ultra 550B via Nebius Token Factory) and Tavily AI Search grounding.
 3. **Static File Server**: Uvicorn serves the production SPA directly at `/`, eliminating the need for complex multi-container networking.
-4. **Execution Sandbox**: Subprocess/Docker runner with timeout and isolated package scoping.
+4. **Execution Sandbox**: Time-limited test runner, using Docker when available and subprocess otherwise.
 
 ---
 
@@ -81,7 +81,7 @@ docker compose up -d --build
 Monitor container boot and health status:
 
 ```bash
-docker compose logs -f specforge-demo
+docker compose logs -f backend
 ```
 
 Verify local health:
@@ -100,9 +100,28 @@ Expected output:
     "fast": "nvidia/nemotron-3-super-120b-a12b",
     "reasoning": "nvidia/Nemotron-3-Ultra-550b-a55b"
   },
-  "tavily_enabled": true
+  "llm_status": "key_ready",
+  "tavily_enabled": true,
+  "tavily_status": "live"
 }
 ```
+
+`llm_status` starts as `key_ready` when credentials are configured. It changes to `live` after a successful Nebius request, or `mock_fallback` if the API request fails. A configured key alone does not guarantee account access or available inference budget.
+
+### Manual deployment without Docker
+
+For a small VPS with Python 3.12 and Node.js 20 installed, build the static frontend and run Uvicorn from the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+cd frontend && npm ci && npm run build && cd ..
+BACKEND_HOST=0.0.0.0 BACKEND_PORT=8000 STORAGE_DIR=./data \
+  python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+Keep the process under a service manager such as systemd or use Docker Compose for automatic restarts. Put a TLS reverse proxy or Cloudflare Tunnel in front of port 8000 before sharing the URL.
 
 ---
 
@@ -247,7 +266,7 @@ Run these automated commands against your public domain:
 | Command | Action |
 | :--- | :--- |
 | `docker compose restart backend` | Restart application service without rebuilding |
-| `docker compose logs -f --tail=100` | Stream recent container logs |
+| `docker compose logs -f --tail=100 backend` | Stream recent container logs |
 | `docker compose down -v` | Stop containers and wipe ephemeral volume storage |
 | `docker compose up -d --build` | Re-pull and rebuild from latest git commit |
 
