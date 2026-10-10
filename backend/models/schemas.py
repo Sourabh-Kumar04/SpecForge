@@ -45,6 +45,8 @@ class ResearchDoc(BaseModel):
     title: str
     summary: str
     key_apis: List[str] = []
+    relevance: Optional[float] = None
+    source: Optional[str] = "tavily"
 
 class GeneratedFile(BaseModel):
     path: str

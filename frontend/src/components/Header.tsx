@@ -156,13 +156,20 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
 
             {/* Tavily Grounding Telemetry */}
             <div
-              className="badge badge-slate"
-              style={{ padding: '0.3rem 0.65rem' }}
-              title="Tavily doc search grounds generated code in latest library syntax"
+              className={`badge ${health.tavily_enabled ? 'badge-green' : 'badge-slate'}`}
+              style={{
+                padding: '0.3rem 0.65rem',
+                border: health.tavily_enabled ? '1px solid rgba(16, 185, 129, 0.4)' : undefined,
+              }}
+              title={
+                health.tavily_enabled
+                  ? 'Tavily AI Search: Live API key active. Runtime queries retrieve real documentation.'
+                  : 'Tavily AI Search: Offline curated knowledge base fallback active.'
+              }
             >
-              <Search size={12} color="var(--accent-amber-bright)" />
-              <span style={{ color: '#cbd5e1' }}>
-                TAVILY: {health.tavily_enabled ? 'ONLINE' : 'FALLBACK'}
+              <Search size={12} color={health.tavily_enabled ? 'var(--color-success-bright)' : 'var(--accent-amber-bright)'} />
+              <span style={{ color: health.tavily_enabled ? '#34d399' : '#cbd5e1' }}>
+                TAVILY: {health.tavily_enabled ? 'LIVE KEY' : 'OFFLINE KB'}
               </span>
             </div>
 

@@ -35,6 +35,7 @@ def health():
             "reasoning": settings.nebius_model_reasoning,
         },
         "tavily_enabled": not settings.effective_mock_tavily,
+        "tavily_status": "live" if not settings.effective_mock_tavily else "offline_kb_fallback",
     }
 
 # Mount frontend if dist exists
@@ -64,4 +65,11 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.main:app", host=settings.backend_host, port=settings.backend_port, reload=True)
+    reload_enabled = os.environ.get("RELOAD", "false").lower() in ("true", "1")
+    uvicorn.run(
+        "backend.main:app",
+        host=settings.backend_host,
+        port=settings.backend_port,
+        reload=reload_enabled,
+        reload_dirs=["backend"] if reload_enabled else None,
+    )

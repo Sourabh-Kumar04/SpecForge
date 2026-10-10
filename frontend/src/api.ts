@@ -49,6 +49,12 @@ export async function fetchJob(jobId: string): Promise<JobDetail> {
   return res.json();
 }
 
+export async function fetchJobsList(): Promise<Array<{ job_id: string; prompt: string; project_type: string; status: string; created_at: string }>> {
+  const res = await fetch(`${BASE_URL}/api/jobs`);
+  if (!res.ok) throw new Error(`Failed to list jobs`);
+  return res.json();
+}
+
 export async function approvePlan(jobId: string, plan: Plan): Promise<JobDetail> {
   const res = await fetch(`${BASE_URL}/api/jobs/${jobId}/approve-plan`, {
     method: 'POST',

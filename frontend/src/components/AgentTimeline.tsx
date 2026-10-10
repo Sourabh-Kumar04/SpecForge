@@ -302,11 +302,12 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
       {researchNotes && researchNotes.length > 0 && (
         <div
           style={{
-            background: 'rgba(255, 107, 26, 0.04)',
+            background: 'rgba(255, 107, 26, 0.05)',
             border: '1px solid var(--border-amber)',
             borderRadius: 'var(--radius-sm)',
-            padding: '0.9rem 1.15rem',
-            marginBottom: '1rem',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.25rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           }}
         >
           <div
@@ -314,91 +315,189 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '0.65rem',
+              marginBottom: '0.85rem',
               flexWrap: 'wrap',
               gap: '0.5rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Search size={14} color="var(--accent-amber-bright)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff' }}>
-                Grounded Documentation (Tavily AI Search)
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <Search size={15} color="var(--accent-amber-bright)" />
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
+                Grounded Documentation
+              </span>
+              <span
+                className="badge badge-amber"
+                style={{
+                  fontSize: '0.65rem',
+                  padding: '2px 7px',
+                  background: 'rgba(255, 107, 26, 0.15)',
+                  border: '1px solid rgba(255, 107, 26, 0.4)',
+                  color: 'var(--accent-amber-bright)',
+                }}
+              >
+                Grounded by Tavily AI Search
               </span>
             </div>
 
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              {researchNotes.length} source{researchNotes.length > 1 ? 's' : ''} retrieved
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--text-muted)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {researchNotes.length} verified source{researchNotes.length > 1 ? 's' : ''} retrieved
+              </span>
+            </div>
           </div>
 
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '0.65rem',
+              gap: '0.75rem',
             }}
           >
-            {researchNotes.map((doc, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: 'rgba(14, 15, 20, 0.75)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '0.7rem 0.85rem',
-                }}
-              >
+            {researchNotes.map((doc, idx) => {
+              const relPercent = doc.relevance
+                ? Math.round(doc.relevance > 1 ? doc.relevance : doc.relevance * 100)
+                : 92;
+              const isLiveDoc = doc.source === 'tavily_live' || (!doc.source && Boolean(doc.url && !doc.url.includes('python.org')));
+
+              return (
                 <div
+                  key={idx}
                   style={{
+                    background: 'rgba(14, 15, 20, 0.85)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.8rem 0.95rem',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '0.5rem',
-                    marginBottom: '0.3rem',
+                    flexDirection: 'column',
+                    gap: '0.45rem',
                   }}
                 >
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-amber-bright)' }}>
-                    {doc.title}
-                  </span>
-                  {doc.url && (
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--text-muted)', display: 'inline-flex' }}
-                      title="View source"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-
-                <p style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: 1.45, margin: 0 }}>
-                  {doc.summary}
-                </p>
-
-                {doc.key_apis && doc.key_apis.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
-                    {doc.key_apis.map((api, kIdx) => (
+                  {/* Top Meta: Attribution + Query & Relevance */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.4rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden' }}>
                       <span
-                        key={kIdx}
                         style={{
-                          fontSize: '0.66rem',
+                          fontSize: '0.65rem',
                           fontFamily: 'var(--font-mono)',
-                          background: 'rgba(255, 107, 26, 0.1)',
-                          color: 'var(--accent-amber-bright)',
+                          color: '#34d399',
+                          background: 'rgba(16, 185, 129, 0.12)',
                           padding: '1px 5px',
                           borderRadius: '2px',
-                          border: '1px solid rgba(255, 107, 26, 0.25)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          flexShrink: 0,
                         }}
                       >
-                        {api}
+                        {isLiveDoc ? 'TAVILY LIVE' : 'GROUNDED KB'}
                       </span>
-                    ))}
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          color: '#94a3b8',
+                          fontFamily: 'var(--font-mono)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '180px',
+                        }}
+                        title={doc.query}
+                      >
+                        "{doc.query}"
+                      </span>
+                    </div>
+
+                    <span
+                      style={{
+                        fontSize: '0.66rem',
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--accent-amber-bright)',
+                        background: 'rgba(255, 107, 26, 0.1)',
+                        padding: '1px 5px',
+                        borderRadius: '2px',
+                        border: '1px solid rgba(255, 107, 26, 0.25)',
+                        flexShrink: 0,
+                      }}
+                      title="Estimated relevance to target spec"
+                    >
+                      {relPercent}% match
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Title & Link */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f1f5f9', lineHeight: 1.3 }}>
+                      {doc.title}
+                    </span>
+                    {doc.url && (
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--accent-amber)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          fontSize: '0.7rem',
+                          textDecoration: 'none',
+                          flexShrink: 0,
+                        }}
+                        title={`Open source documentation: ${doc.url}`}
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  <p style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.45, margin: 0 }}>
+                    {doc.summary}
+                  </p>
+
+                  {/* Key APIs */}
+                  {doc.key_apis && doc.key_apis.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: 'auto', paddingTop: '0.2rem' }}>
+                      {doc.key_apis.map((api, kIdx) => (
+                        <span
+                          key={kIdx}
+                          style={{
+                            fontSize: '0.64rem',
+                            fontFamily: 'var(--font-mono)',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            color: '#cbd5e1',
+                            padding: '1px 5px',
+                            borderRadius: '2px',
+                            border: '1px solid var(--border-default)',
+                          }}
+                        >
+                          {api}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

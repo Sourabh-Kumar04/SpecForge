@@ -174,3 +174,16 @@ ModuleNotFoundError: No module named 'openjev.train'
     assert "LOCAL_IMPORT_ERROR" in ev.message
     assert ev.data["suggested_target"] == "code"
     assert ev.data["allow_requirements_edit"] is False
+
+def test_classifier_stdlib_guard():
+    traceback = "ModuleNotFoundError: No module named 'json.tool_extra'"
+    diag = classify_failure(traceback, ["app.py"])
+    assert diag.category == FailureCategory.CODE_ERROR
+    assert diag.allow_requirements_edit is False
+    assert "standard library" in diag.summary.lower()
+
+def test_classifier_framework_internal_guard():
+    traceback = "ModuleNotFoundError: No module named '_pytest.scope'"
+    diag = classify_failure(traceback, ["tests/test_foo.py"])
+    assert diag.category == FailureCategory.CODE_ERROR
+    assert diag.allow_requirements_edit is False

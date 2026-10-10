@@ -33,6 +33,8 @@ export interface ResearchDoc {
   title: string;
   summary: string;
   key_apis: string[];
+  relevance?: number;
+  source?: string;
 }
 
 export interface GeneratedFile {
@@ -150,6 +152,7 @@ export interface HealthInfo {
     reasoning: string;
   };
   tavily_enabled: boolean;
+  tavily_status?: 'live' | 'offline_kb_fallback';
 }
 
 export interface SettingsInfo {

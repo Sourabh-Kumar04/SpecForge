@@ -98,6 +98,17 @@ export const App: React.FC = () => {
         }
       })
       .catch((err) => console.error('Failed to load examples:', err));
+
+    const params = new URLSearchParams(window.location.search);
+    const urlJobId = params.get('job');
+    if (urlJobId) {
+      fetchJob(urlJobId)
+        .then((j) => {
+          setCurrentJob(j);
+          setActiveTab('preview');
+        })
+        .catch((err) => console.error('Failed to load url job:', err));
+    }
   }, []);
 
   // Handle SSE subscription when job changes

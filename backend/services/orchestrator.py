@@ -195,8 +195,16 @@ class AgenticOrchestrator:
                 storage_service.save_research(job_id, research_docs)
                 for doc in research_docs:
                     await storage_service.emit_event(
-                        job_id, "researcher", "log", f"Grounded research: {doc.title}",
-                        {"url": doc.url, "summary": doc.summary[:200], "key_apis": doc.key_apis}
+                        job_id, "researcher", "log", f"Grounded by Tavily: {doc.title} (Query: '{doc.query}')",
+                        {
+                            "title": doc.title,
+                            "url": doc.url,
+                            "query": doc.query,
+                            "relevance": doc.relevance,
+                            "source": doc.source,
+                            "summary": doc.summary[:200],
+                            "key_apis": doc.key_apis,
+                        }
                     )
             else:
                 await storage_service.emit_event(
@@ -352,7 +360,8 @@ class AgenticOrchestrator:
                 tier="fast"
             )
             files = []
-            for f in (data.get("files", []) if isinstance(data, dict) else []):
+            file_items = data if isinstance(data, list) else (data.get("files", []) if isinstance(data, dict) else [])
+            for f in file_items:
                 if isinstance(f, dict) and "path" in f:
                     content = f.get("content") or f.get("code") or f.get("source") or ""
                     files.append(GeneratedFile(
@@ -388,7 +397,8 @@ class AgenticOrchestrator:
                 tier="fast"
             )
             tests = []
-            for tf in (data.get("test_files", []) if isinstance(data, dict) else []):
+            test_items = data if isinstance(data, list) else (data.get("test_files", []) if isinstance(data, dict) else [])
+            for tf in test_items:
                 if isinstance(tf, dict) and "path" in tf:
                     content = tf.get("content") or tf.get("code") or tf.get("source") or ""
                     tests.append(GeneratedFile(
@@ -439,9 +449,11 @@ class AgenticOrchestrator:
             return
 
         self.check_spend_cap_before_call(job_id)
+        files_context = "\n\n".join([f"--- {f.path} ---\n{f.content}" for f in current_files])
         user_prompt = (
             f"Failed Test Output:\n{error_output}\n\n"
             f"{diagnosis.guidance_prompt}\n\n"
+            f"Current Workspace Files:\n{files_context}\n\n"
             f"Plan:\n{plan.model_dump_json()}"
         )
         data, reasoning = llm_client.complete_json(

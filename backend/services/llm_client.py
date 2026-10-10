@@ -42,6 +42,14 @@ def extract_json_from_text(text: str) -> Any:
             repaired = _repair_triple_quotes(s)
             return json.loads(repaired, strict=False)
         except Exception:
+            pass
+
+        try:
+            import json_repair
+            val = json_repair.loads(s)
+            if val is not None and isinstance(val, (dict, list)):
+                return val
+        except Exception:
             return None
 
     # Check for markdown code fences
@@ -66,6 +74,17 @@ def extract_json_from_text(text: str) -> Any:
         res = _parse(snippet)
         if res is not None:
             return res
+
+    # If first brace didn't work, search all '{' candidates that look like JSON object keys
+    if last_brace != -1:
+        for match in re.finditer(r"\{", clean_text):
+            idx = match.start()
+            ahead = clean_text[idx:idx + 50]
+            if '"' in ahead and ':' in ahead and last_brace > idx:
+                snippet = clean_text[idx:last_brace + 1]
+                res = _parse(snippet)
+                if res is not None:
+                    return res
 
     # Find outermost [ ... ]
     first_bracket = clean_text.find("[")
@@ -234,7 +253,30 @@ class LLMClient:
             "All string values (including multiline code) must be properly JSON-escaped strings (use \\n for newlines, \\\" for double quotes)."
         )
         content, reasoning = self.complete(system_prompt_with_json, user_prompt, tier=tier)
-        parsed = extract_json_from_text(content)
+        try:
+            parsed = extract_json_from_text(content)
+        except ValueError as original_err:
+            # 1. Try parsing reasoning content if available
+            if reasoning:
+                try:
+                    parsed = extract_json_from_text(reasoning)
+                    return parsed, reasoning
+                except Exception:
+                    pass
+
+            # 2. Try one fast self-repair completion call to extract valid JSON
+            if not self.is_mock and self.client:
+                logger.warning("Failed to extract JSON directly; invoking fast model for JSON repair extraction")
+                repair_system = "You are a precise JSON extractor. Output ONLY the extracted valid JSON object or array. No explanations, no markdown intro, no outro."
+                repair_user = f"Extract and format the valid JSON from this text:\n\n{content[:16000]}"
+                try:
+                    repaired_text, _ = self.complete(repair_system, repair_user, tier="fast", temperature=0.0)
+                    parsed = extract_json_from_text(repaired_text)
+                    return parsed, reasoning
+                except Exception as repair_err:
+                    logger.error(f"JSON repair failed: {repair_err}")
+
+            raise original_err
         return parsed, reasoning
 
     def _mock_completion(self, system_prompt: str, user_prompt: str, tier: str) -> Tuple[str, Optional[str]]:

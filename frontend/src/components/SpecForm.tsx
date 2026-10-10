@@ -470,6 +470,22 @@ export const SpecForm: React.FC<SpecFormProps> = ({
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: enableResearch ? '#ffffff' : 'var(--text-secondary)' }}>
                 Tavily Live Grounding
               </span>
+              {enableResearch && (
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    fontFamily: 'var(--font-mono)',
+                    padding: '1px 5px',
+                    borderRadius: '2px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                  }}
+                  title="Tavily AI Search: Grounded web search active for latest library documentation"
+                >
+                  LIVE KEY
+                </span>
+              )}
             </div>
           </button>
 

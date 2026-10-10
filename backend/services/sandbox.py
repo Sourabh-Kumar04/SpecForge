@@ -72,17 +72,45 @@ class SandboxRunner:
         env = os.environ.copy()
         env["PYTHONPATH"] = f"{workspace_dir.resolve()}:{workspace_dir.resolve() / 'src'}:{env.get('PYTHONPATH', '')}"
 
-        # Find python executable to run pytest
+        # Always run pytest via current Python interpreter to ensure package consistency
         python_bin = sys.executable
-        venv_pytest = Path(".venv/bin/pytest").resolve()
-        if venv_pytest.exists():
-            pytest_cmd = [str(venv_pytest)]
-        else:
-            system_pytest = shutil.which("pytest")
-            if system_pytest:
-                pytest_cmd = [system_pytest]
-            else:
-                pytest_cmd = [python_bin, "-m", "pytest"]
+        pytest_cmd = [python_bin, "-m", "pytest"]
+
+        # If requirements.txt is present, ensure required packages are available
+        reqs_file = workspace_dir / "requirements.txt"
+        if reqs_file.exists():
+            try:
+                raw_lines = reqs_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                safe_pkgs = []
+                for line in raw_lines:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    pkg_name = re.split(r"[><=~;]", line)[0].strip().lower()
+                    if pkg_name in ("pytest", "pytest-asyncio", "pydantic", "fastapi", "uvicorn", "starlette", "sse-starlette"):
+                        continue
+                    safe_pkgs.append(line)
+                if safe_pkgs:
+                    uv_bin = shutil.which("uv")
+                    if uv_bin:
+                        install_proc = await asyncio.create_subprocess_exec(
+                            uv_bin, "pip", "install", "-q", "--python", python_bin, *safe_pkgs,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                    else:
+                        in_venv = sys.prefix != sys.base_prefix
+                        pip_args = [python_bin, "-m", "pip", "install", "-q", *safe_pkgs]
+                        if not in_venv:
+                            pip_args.extend(["--user", "--break-system-packages"])
+                        install_proc = await asyncio.create_subprocess_exec(
+                            *pip_args,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                    await asyncio.wait_for(install_proc.communicate(), timeout=30.0)
+            except Exception as e:
+                logger.warning(f"Sandbox pip install skipped/failed: {e}")
 
         # Ensure pytest config overrides parent configs and isolates pythonpath to workspace
         override_opts = ["-o", f"pythonpath={workspace_dir.resolve()} {workspace_dir.resolve() / 'src'}", "--override-ini=rootdir=."]

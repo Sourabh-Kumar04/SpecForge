@@ -98,6 +98,43 @@ def classify_failure(error_output: str, workspace_files: Optional[List[str]] = N
         if not local_check.is_local and imported_from:
             local_check = check_local_module(imported_from, files)
 
+        STDLIB_MODULES = {
+            "os", "sys", "re", "json", "math", "time", "datetime", "typing", "pathlib",
+            "collections", "functools", "itertools", "dataclasses", "abc", "copy", "uuid",
+            "random", "hashlib", "io", "subprocess", "logging", "asyncio", "unittest",
+            "shutil", "tempfile", "socket", "http", "urllib", "sqlite3", "csv", "xml",
+            "html", "enum", "inspect", "contextlib", "threading", "multiprocessing",
+            "traceback", "warnings", "glob", "fnmatch", "base64", "secrets", "platform",
+            "signal", "difflib", "argparse", "string"
+        }
+        KNOWN_PKG_MAP = {
+            "yaml": "PyYAML",
+            "dotenv": "python-dotenv",
+            "bs4": "beautifulsoup4",
+            "PIL": "Pillow",
+            "cv2": "opencv-python",
+            "sklearn": "scikit-learn",
+        }
+
+        top_mod = missing_module.split(".")[0].lower()
+        if top_mod in STDLIB_MODULES or top_mod.startswith("_") or top_mod in ("pytest", "_pytest"):
+            summary = f"Import error on standard library or internal module '{missing_module}'."
+            strategy = f"Fix the import statement or module reference in source code. Do NOT add standard or framework modules to requirements.txt."
+            guidance = (
+                f"CRITICAL FIXER DIRECTIVE:\n"
+                f"'{missing_module}' is a Python standard library or test framework symbol, not a third-party package.\n"
+                f"DO NOT add it to requirements.txt! Fix the code or import directly."
+            )
+            return FailureDiagnosis(
+                category=FailureCategory.CODE_ERROR,
+                summary=summary,
+                strategy=strategy,
+                suggested_target="code",
+                allow_requirements_edit=False,
+                details={"missing_module": missing_module, "is_stdlib_or_framework": True},
+                guidance_prompt=guidance,
+            )
+
         if local_check.is_local:
             summary = (
                 f"Wrong local import path for '{missing_module}'. "
@@ -128,13 +165,14 @@ def classify_failure(error_output: str, workspace_files: Optional[List[str]] = N
                 guidance_prompt=guidance,
             )
         else:
-            summary = f"Missing third-party dependency '{missing_module}'."
-            strategy = f"Add '{missing_module}' to requirements.txt with appropriate version pinning."
+            suggested_pkg = KNOWN_PKG_MAP.get(top_mod, missing_module)
+            summary = f"Missing third-party dependency '{missing_module}' (PyPI package: {suggested_pkg})."
+            strategy = f"Add '{suggested_pkg}' to requirements.txt with appropriate version pinning."
             guidance = (
                 f"CRITICAL FIXER DIRECTIVE:\n"
                 f"Failure is classified as MISSING_DEPENDENCY for external package '{missing_module}'.\n"
                 f"This package does not exist in local project files.\n"
-                f"Add '{missing_module}' to requirements.txt."
+                f"Add '{suggested_pkg}' to requirements.txt."
             )
             return FailureDiagnosis(
                 category=FailureCategory.MISSING_DEPENDENCY,
@@ -144,6 +182,7 @@ def classify_failure(error_output: str, workspace_files: Optional[List[str]] = N
                 allow_requirements_edit=True,
                 details={
                     "missing_module": missing_module,
+                    "suggested_pkg": suggested_pkg,
                     "error_type": "ModuleNotFoundError",
                 },
                 guidance_prompt=guidance,

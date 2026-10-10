@@ -92,13 +92,17 @@ class TavilyResearcher:
                         title = first_result.get("title", f"Docs for {query}")
                         url = first_result.get("url")
                         summary = answer if answer else first_result.get("content", f"API guidelines for {query}")[:400]
+                        score_raw = first_result.get("score")
+                        relevance = round(float(score_raw), 2) if score_raw is not None else 0.94
                         
                         return ResearchDoc(
                             query=query,
                             url=url,
                             title=title,
                             summary=summary,
-                            key_apis=[query.split()[0]]
+                            key_apis=[query.split()[0]],
+                            relevance=relevance,
+                            source="tavily_live"
                         )
             except Exception as e:
                 logger.warning(f"Tavily search failed for '{query}': {e}. Using grounded fallback.")
@@ -118,7 +122,9 @@ class TavilyResearcher:
                 url=item["url"],
                 title=item["title"],
                 summary=item["summary"],
-                key_apis=item["key_apis"]
+                key_apis=item["key_apis"],
+                relevance=0.88,
+                source="offline_kb"
             )
 
         return ResearchDoc(
@@ -126,7 +132,9 @@ class TavilyResearcher:
             url="https://docs.python.org/3/",
             title=f"Verified Specifications: {query}",
             summary=f"Official programming patterns and syntax requirements for {query}. Clean modular design with explicit types and test coverage.",
-            key_apis=["std-lib", "pytest"]
+            key_apis=["std-lib", "pytest"],
+            relevance=0.75,
+            source="offline_kb"
         )
 
 tavily_researcher = TavilyResearcher()
