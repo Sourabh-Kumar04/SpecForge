@@ -111,7 +111,7 @@ def classify_failure(error_output: str, workspace_files: Optional[List[str]] = N
             "yaml": "PyYAML",
             "dotenv": "python-dotenv",
             "bs4": "beautifulsoup4",
-            "PIL": "Pillow",
+            "pil": "Pillow",
             "cv2": "opencv-python",
             "sklearn": "scikit-learn",
         }

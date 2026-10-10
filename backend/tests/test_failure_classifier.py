@@ -58,6 +58,22 @@ ModuleNotFoundError: No module named 'httpx'
     assert diagnosis.allow_requirements_edit is True
     assert "httpx" in diagnosis.summary
 
+
+@pytest.mark.parametrize(
+    ("module_name", "expected_package"),
+    [("PIL", "Pillow"), ("cv2", "opencv-python")],
+)
+def test_known_import_names_map_to_installable_packages(module_name, expected_package):
+    diagnosis = classify_failure(
+        f"ModuleNotFoundError: No module named '{module_name}'",
+        ["app/main.py", "requirements.txt"],
+    )
+
+    assert diagnosis.category == FailureCategory.MISSING_DEPENDENCY
+    assert diagnosis.details["suggested_pkg"] == expected_package
+    assert diagnosis.suggested_target == "requirements"
+    assert diagnosis.allow_requirements_edit is True
+
 def test_classify_name_error_missing_numpy_import():
     """
     Replays failure mode: missing numpy import causing NameError: name 'np' is not defined.
