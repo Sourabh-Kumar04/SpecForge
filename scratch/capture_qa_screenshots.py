@@ -7,8 +7,8 @@ BASE_URL = "http://localhost:8001"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "design_qa"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-VERIFIED_JOB_ID = "e4aa0b9c"
-REFINE_JOB_ID = "test_refine_c91c5b"
+VERIFIED_JOB_ID = "4e3a6824"
+REFINE_JOB_ID = "test_refine_8f3c47"
 
 async def run():
     async with async_playwright() as p:
@@ -44,10 +44,10 @@ async def run():
         await page.goto(f"{BASE_URL}/?job={VERIFIED_JOB_ID}", wait_until="domcontentloaded")
         await page.wait_for_timeout(1500)
         await page.evaluate("""() => {
-            const el = document.querySelector('[data-timeline-container]') || Array.from(document.querySelectorAll('div')).find(d => d.textContent && d.textContent.includes('Agentic Pipeline Telemetry'));
+            const el = Array.from(document.querySelectorAll('h3')).find(d => d.textContent && d.textContent.includes('Agentic Pipeline Telemetry'));
             if (el) {
                 el.scrollIntoView({ behavior: 'instant', block: 'start' });
-                window.scrollBy(0, -85);
+                window.scrollBy(0, -90);
             }
         }""")
         await page.wait_for_timeout(600)
@@ -55,21 +55,23 @@ async def run():
         await page.screenshot(path=str(OUTPUT_DIR / "02_pipeline_timeline_research.png"))
 
         # 4. PreviewPanel / Live Preview Runtime Screen
-        print("4. Capturing 03_preview_panel.png...")
-        preview_tab = page.locator('button:has-text("LIVE PREVIEW")')
-        if await preview_tab.count() > 0:
-            await preview_tab.first.click()
-            await page.wait_for_timeout(800)
-            await page.evaluate("""() => {
-                for (const b of document.querySelectorAll('button')) {
-                    if (b.textContent && b.textContent.includes('LIVE PREVIEW')) {
-                        b.scrollIntoView({ behavior: 'instant', block: 'start' });
-                        window.scrollBy(0, -85);
-                        break;
-                    }
+        print("4. Capturing 03_preview_panel.png with real executed CLI...")
+        await page.goto(f"{BASE_URL}/?job=test_prev_cli_e358fb", wait_until="domcontentloaded")
+        await page.wait_for_timeout(1000)
+        run_btn = page.locator('button:has-text("Run Invocation")')
+        if await run_btn.count() > 0:
+            await run_btn.first.click()
+            await page.wait_for_timeout(1200)
+        await page.evaluate("""() => {
+            for (const b of document.querySelectorAll('button')) {
+                if (b.textContent && b.textContent.includes('LIVE PREVIEW')) {
+                    b.scrollIntoView({ behavior: 'instant', block: 'start' });
+                    window.scrollBy(0, -90);
+                    break;
                 }
-            }""")
-            await page.wait_for_timeout(600)
+            }
+        }""")
+        await page.wait_for_timeout(600)
         print("Capturing 03_preview_panel.png...")
         await page.screenshot(path=str(OUTPUT_DIR / "03_preview_panel.png"))
 
@@ -116,10 +118,10 @@ async def run():
             await forge_btn.first.click()
             await page.wait_for_timeout(2500)
             await page.evaluate("""() => {
-                const el = Array.from(document.querySelectorAll('div')).find(d => d.textContent && d.textContent.includes('Agentic Pipeline Telemetry'));
+                const el = Array.from(document.querySelectorAll('h3')).find(d => d.textContent && d.textContent.includes('Agentic Pipeline Telemetry'));
                 if (el) {
                     el.scrollIntoView({ behavior: 'instant', block: 'start' });
-                    window.scrollBy(0, -85);
+                    window.scrollBy(0, -90);
                 }
             }""")
             await page.wait_for_timeout(500)
