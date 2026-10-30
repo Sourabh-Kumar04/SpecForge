@@ -3,6 +3,9 @@ from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_ENV_FILE = ROOT_DIR / ".env"
+
 class Settings(BaseSettings):
     nebius_base_url: str = "https://api.studio.nebius.ai/v1"
     nebius_api_key: Optional[str] = None
@@ -13,13 +16,13 @@ class Settings(BaseSettings):
     max_fix_iterations: int = 5
     sandbox_timeout_seconds: int = 35
     docker_sandbox_enabled: bool = True
-    storage_dir: Path = (Path(__file__).resolve().parent.parent / "data").resolve()
+    storage_dir: Path = (ROOT_DIR / "data").resolve()
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     nebius_spend_cap_usd: float = 2.00
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(ROOT_ENV_FILE, ".env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
