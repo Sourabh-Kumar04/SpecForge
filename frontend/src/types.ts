@@ -168,3 +168,33 @@ export interface SettingsInfo {
   mock_mode: boolean;
   tavily_enabled: boolean;
 }
+
+export interface ComponentDependency {
+  name: string;
+  import_path: string;
+  version: string;
+}
+
+export interface ComponentItem {
+  name: string;
+  file_name: string;
+  path: string;
+  category: string;
+  version: string;
+  line_count: number;
+  size_bytes: number;
+  dependencies: ComponentDependency[];
+  internal_dependencies: string[];
+  exports: string[];
+}
+
+export interface ComponentInventoryResponse {
+  status: string;
+  specforge_version: string;
+  total_components: number;
+  package_json: {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
+  components: ComponentItem[];
+}

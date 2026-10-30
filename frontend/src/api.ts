@@ -185,3 +185,16 @@ export async function updateSettings(params: {
   }
   return res.json();
 }
+
+export async function fetchComponents(): Promise<import('./types').ComponentInventoryResponse> {
+  const res = await fetch(`${BASE_URL}/api/components`);
+  if (!res.ok) throw new Error(`Failed to fetch component inventory: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchJobComponents(jobId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/components/job/${jobId}`);
+  if (!res.ok) throw new Error(`Failed to fetch job components: ${res.statusText}`);
+  return res.json();
+}
+

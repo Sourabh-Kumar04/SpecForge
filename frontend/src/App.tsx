@@ -9,6 +9,7 @@ import { PlanEditorModal } from './components/PlanEditorModal';
 import { PreviewPanel } from './components/PreviewPanel';
 import { RefineBox } from './components/RefineBox';
 import { SettingsModal } from './components/SettingsModal';
+import { ComponentsInventory } from './components/ComponentsInventory';
 import {
   ProjectType,
   JobDetail,
@@ -33,7 +34,6 @@ import {
 import {
   Download,
   Edit,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   Code2,
@@ -41,6 +41,7 @@ import {
   Terminal,
   FileCode,
   FlaskConical,
+  Boxes,
 } from 'lucide-react';
 
 const SAMPLE_FASTMCP_SPEC: ExampleSpec = {
@@ -67,7 +68,8 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'files' | 'preview' | 'tests'>('preview');
+  const [activeTab, setActiveTab] = useState<'files' | 'preview' | 'tests' | 'components'>('preview');
+  const [activeView, setActiveView] = useState<'studio' | 'components'>('studio');
   const [isRetesting, setIsRetesting] = useState<boolean>(false);
   const [isRefining, setIsRefining] = useState<boolean>(false);
   const [settings, setSettings] = useState<SettingsInfo | null>(null);
@@ -100,6 +102,10 @@ export const App: React.FC = () => {
       .catch((err) => console.error('Failed to load examples:', err));
 
     const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    if (viewParam === 'components' || viewParam === 'studio') {
+      setActiveView(viewParam);
+    }
     const urlJobId = params.get('job');
     if (urlJobId) {
       fetchJob(urlJobId)
@@ -256,110 +262,102 @@ export const App: React.FC = () => {
         currentJob={currentJob}
         onOpenSettings={() => setIsSettingsOpen(true)}
         settings={settings}
+        activeView={activeView}
+        onSelectView={setActiveView}
       />
 
       <main
         style={{
           maxWidth: '1240px',
           margin: '0 auto',
-          padding: '2.5rem 1.5rem',
+          padding: '2rem 1.5rem',
           width: '100%',
           flex: 1,
         }}
       >
-        {/* FORGE IDENTITY HERO CALLOUT */}
-        <div
-          className="glass-panel"
-          style={{
-            position: 'relative',
-            padding: '2rem 2.25rem',
-            marginBottom: '2rem',
-            background: 'linear-gradient(145deg, rgba(18, 19, 25, 0.95) 0%, rgba(12, 13, 17, 0.98) 100%)',
-            border: '1px solid var(--border-amber)',
-            boxShadow: '0 12px 36px -4px rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 107, 26, 0.1)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Molten amber hairline top accent */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, #ff6b1a 50%, transparent)',
-            }}
-          />
-
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              marginBottom: '0.85rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span
-                className="badge badge-amber"
-                style={{
-                  fontSize: '0.74rem',
-                  letterSpacing: '0.04em',
-                  fontWeight: 800,
-                  boxShadow: '0 0 10px rgba(255, 107, 26, 0.25)',
-                }}
-              >
-                <Flame size={13} />
-                CODE REFINERY
-              </span>
-              <span className="badge badge-slate" style={{ fontSize: '0.72rem' }}>
-                NVIDIA NEMOTRON REASONING
-              </span>
-              <span className="badge badge-slate" style={{ fontSize: '0.72rem' }}>
-                TAVILY GROUNDED
-              </span>
-            </div>
-
-            <span
+        {activeView === 'components' ? (
+          <ComponentsInventory currentJob={currentJob} />
+        ) : (
+          <>
+            {/* SPECFORGE STUDIO HERO */}
+            <div
+              className="glass-panel"
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.72rem',
-                color: 'var(--text-muted)',
+                position: 'relative',
+                padding: '1.75rem 2rem',
+                marginBottom: '1.75rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              ISOLATED SANDBOX EXECUTION
-            </span>
-          </div>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span
+                    className="badge badge-amber"
+                    style={{
+                      fontSize: '0.74rem',
+                      letterSpacing: '0.04em',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Flame size={13} />
+                    SPEC-TO-REPO STUDIO
+                  </span>
+                  <span className="badge badge-slate" style={{ fontSize: '0.72rem' }}>
+                    NVIDIA NEMOTRON REASONING
+                  </span>
+                  <span className="badge badge-slate" style={{ fontSize: '0.72rem' }}>
+                    TAVILY GROUNDED
+                  </span>
+                </div>
 
-          <h1
-            style={{
-              fontSize: '2.2rem',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-0.035em',
-              lineHeight: 1.2,
-              margin: '0.4rem 0 0.75rem 0',
-            }}
-          >
-            Raw specification in. Verified code out.
-          </h1>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  ISOLATED SANDBOX EXECUTION
+                </span>
+              </div>
 
-          <p
-            style={{
-              fontSize: '0.94rem',
-              color: '#cbd5e1',
-              maxWidth: '840px',
-              lineHeight: 1.65,
-              margin: 0,
-            }}
-          >
-            <strong style={{ color: 'var(--accent-amber-bright)' }}>Describe it. Watch it build. Inspect the proof.</strong>{' '}
-            SpecForge eliminates outdated syntax using Tavily documentation search, generates clean multi-file architectures with NVIDIA Nemotron, and proves every assertion works inside an isolated sandbox test and fix loop until 100% green.
-          </p>
-        </div>
+              <h1
+                style={{
+                  fontSize: '1.85rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.25,
+                  margin: '0.35rem 0 0.65rem 0',
+                }}
+              >
+                Raw specification in. Verified code out.
+              </h1>
+
+              <p
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'var(--text-secondary)',
+                  maxWidth: '840px',
+                  lineHeight: 1.6,
+                  margin: 0,
+                }}
+              >
+                <strong style={{ color: 'var(--accent-forge-bright)' }}>Describe it. Watch it build. Inspect the proof.</strong>{' '}
+                SpecForge eliminates outdated syntax using Tavily documentation search, generates clean multi-file architectures with NVIDIA Nemotron, and proves every assertion works inside an isolated sandbox test and fix loop until 100% green.
+              </p>
+            </div>
 
         {/* Error notification banner */}
         {errorMsg && (
@@ -411,7 +409,7 @@ export const App: React.FC = () => {
           <div
             className="glass-panel"
             style={{
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 24, 20, 0.95) 100%)',
+              background: 'var(--bg-card)',
               border: '1.5px solid var(--color-success)',
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem 1.75rem',
@@ -421,38 +419,37 @@ export const App: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '1.25rem',
-              boxShadow: '0 0 32px rgba(34, 197, 94, 0.25)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div
                 style={{
-                  width: '46px',
-                  height: '46px',
+                  width: '42px',
+                  height: '42px',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(34, 197, 94, 0.2)',
+                  background: 'var(--color-success-subtle)',
                   border: '1px solid var(--color-success)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 16px rgba(34, 197, 94, 0.4)',
                   flexShrink: 0,
                 }}
               >
-                <CheckCircle2 size={26} color="var(--color-success-bright)" />
+                <CheckCircle2 size={24} color="var(--color-success-bright)" />
               </div>
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      fontSize: '1.35rem',
+                      fontSize: '1.25rem',
                       fontWeight: 800,
                       color: 'var(--color-success-bright)',
-                      letterSpacing: '0.02em',
+                      letterSpacing: '0.01em',
                     }}
                   >
-                    FORGED & VERIFIED GREEN ✓
+                    FORGED & VERIFIED GREEN
                   </span>
                   <span
                     className="badge badge-green"
@@ -464,9 +461,9 @@ export const App: React.FC = () => {
                     <span
                       className="badge"
                       style={{
-                        background: 'rgba(56, 189, 248, 0.15)',
-                        border: '1px solid rgba(56, 189, 248, 0.4)',
-                        color: '#38bdf8',
+                        background: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--accent-forge-bright)',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -477,7 +474,7 @@ export const App: React.FC = () => {
                   )}
                 </div>
 
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   Every generated file executed in an isolated sandbox with zero assertion failures.
                 </p>
               </div>
@@ -491,19 +488,20 @@ export const App: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
+                  padding: '0.65rem 1.35rem',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  background: 'var(--color-success)',
+                  border: '1px solid var(--color-success)',
                   color: '#ffffff',
                   fontWeight: 700,
-                  fontSize: '0.88rem',
+                  fontSize: '0.86rem',
                   fontFamily: 'var(--font-mono)',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+                  boxShadow: 'var(--shadow-sm)',
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Download size={16} />
+                <Download size={15} />
                 <span>Export ZIP</span>
               </a>
             )}
@@ -515,8 +513,8 @@ export const App: React.FC = () => {
           <div
             className="glass-panel"
             style={{
-              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(24, 20, 10, 0.95) 100%)',
-              border: '1.5px solid #eab308',
+              background: 'var(--bg-card)',
+              border: '1.5px solid var(--color-warning)',
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem 1.75rem',
               marginBottom: '1.75rem',
@@ -525,35 +523,34 @@ export const App: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '1.25rem',
-              boxShadow: '0 0 32px rgba(234, 179, 8, 0.25)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div
                 style={{
-                  width: '46px',
-                  height: '46px',
+                  width: '42px',
+                  height: '42px',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(234, 179, 8, 0.2)',
-                  border: '1px solid #eab308',
+                  background: 'var(--color-warning-subtle)',
+                  border: '1px solid var(--color-warning)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 16px rgba(234, 179, 8, 0.4)',
                   flexShrink: 0,
                 }}
               >
-                <AlertCircle size={26} color="#facc15" />
+                <AlertCircle size={24} color="var(--color-warning-bright)" />
               </div>
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      fontSize: '1.25rem',
+                      fontSize: '1.2rem',
                       fontWeight: 800,
-                      color: '#facc15',
-                      letterSpacing: '0.02em',
+                      color: 'var(--color-warning-bright)',
+                      letterSpacing: '0.01em',
                     }}
                   >
                     PIPELINE PAUSED: SPEND CAP REACHED
@@ -562,9 +559,9 @@ export const App: React.FC = () => {
                     <span
                       className="badge"
                       style={{
-                        background: 'rgba(234, 179, 8, 0.2)',
-                        border: '1px solid #eab308',
-                        color: '#fef08a',
+                        background: 'var(--color-warning-subtle)',
+                        border: '1px solid var(--color-warning)',
+                        color: 'var(--color-warning-bright)',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -575,7 +572,7 @@ export const App: React.FC = () => {
                   )}
                 </div>
 
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   The job stopped calling Nebius LLMs to protect your budget. You can inspect existing code, adjust the spend cap in Settings, or re-run.
                 </p>
               </div>
@@ -588,9 +585,9 @@ export const App: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: '0.65rem 1.25rem',
+                padding: '0.55rem 1.15rem',
                 borderRadius: 'var(--radius-sm)',
-                background: '#ca8a04',
+                background: 'var(--color-warning)',
                 color: '#ffffff',
                 fontWeight: 700,
                 fontSize: '0.82rem',
@@ -697,12 +694,12 @@ export const App: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  padding: '0.5rem 1rem',
+                  padding: '0.45rem 0.9rem',
                   borderRadius: 'var(--radius-sm)',
                   border: activeTab === 'preview' ? '1px solid var(--border-amber)' : '1px solid transparent',
-                  background: activeTab === 'preview' ? 'rgba(255, 107, 26, 0.15)' : 'transparent',
-                  color: activeTab === 'preview' ? 'var(--accent-amber-bright)' : 'var(--text-secondary)',
-                  fontSize: '0.82rem',
+                  background: activeTab === 'preview' ? 'var(--accent-forge-subtle)' : 'transparent',
+                  color: activeTab === 'preview' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                  fontSize: '0.8rem',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -720,12 +717,12 @@ export const App: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  padding: '0.5rem 1rem',
+                  padding: '0.45rem 0.9rem',
                   borderRadius: 'var(--radius-sm)',
                   border: activeTab === 'files' ? '1px solid var(--border-amber)' : '1px solid transparent',
-                  background: activeTab === 'files' ? 'rgba(255, 107, 26, 0.15)' : 'transparent',
-                  color: activeTab === 'files' ? 'var(--accent-amber-bright)' : 'var(--text-secondary)',
-                  fontSize: '0.82rem',
+                  background: activeTab === 'files' ? 'var(--accent-forge-subtle)' : 'transparent',
+                  color: activeTab === 'files' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                  fontSize: '0.8rem',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -743,12 +740,12 @@ export const App: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  padding: '0.5rem 1rem',
+                  padding: '0.45rem 0.9rem',
                   borderRadius: 'var(--radius-sm)',
                   border: activeTab === 'tests' ? '1px solid var(--border-amber)' : '1px solid transparent',
-                  background: activeTab === 'tests' ? 'rgba(255, 107, 26, 0.15)' : 'transparent',
-                  color: activeTab === 'tests' ? 'var(--accent-amber-bright)' : 'var(--text-secondary)',
-                  fontSize: '0.82rem',
+                  background: activeTab === 'tests' ? 'var(--accent-forge-subtle)' : 'transparent',
+                  color: activeTab === 'tests' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                  fontSize: '0.8rem',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -757,6 +754,29 @@ export const App: React.FC = () => {
               >
                 <FlaskConical size={14} />
                 <span>[TEST VERIFICATION PROOF]</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('components')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: activeTab === 'components' ? '1px solid var(--border-amber)' : '1px solid transparent',
+                  background: activeTab === 'components' ? 'var(--accent-forge-subtle)' : 'transparent',
+                  color: activeTab === 'components' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                  fontSize: '0.8rem',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Boxes size={14} />
+                <span>[COMPONENT INVENTORY]</span>
               </button>
             </div>
 
@@ -785,7 +805,14 @@ export const App: React.FC = () => {
                 spend={currentJob?.spend}
               />
             )}
+
+            {/* Tab 4: Component Inventory Tracker */}
+            {activeTab === 'components' && (
+              <ComponentsInventory currentJob={currentJob} />
+            )}
           </div>
+        )}
+          </>
         )}
       </main>
 

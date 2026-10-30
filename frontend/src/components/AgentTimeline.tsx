@@ -71,7 +71,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
     { key: 'coding', label: '3. SYNTHESIS', icon: Code2, desc: 'Multi-file code forge' },
     { key: 'testing', label: '4. SANDBOX', icon: FlaskConical, desc: 'Isolated test run' },
     { key: 'fixing', label: '5. FIXER LOOP', icon: Wrench, desc: 'Autonomous bugfix' },
-    { key: 'completed', label: '6. VERIFIED ✓', icon: CheckCircle2, desc: '100% tests green' },
+    { key: 'completed', label: '6. VERIFIED', icon: CheckCircle2, desc: '100% tests green' },
   ];
 
   const getStageState = (stageKey: string): 'pending' | 'current' | 'completed' | 'skipped' | 'failed' => {
@@ -230,18 +230,16 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             textColor = 'var(--text-dim)';
           } else if (state === 'current') {
             borderColor = 'var(--accent-amber)';
-            bgColor = 'rgba(255, 107, 26, 0.1)';
+            bgColor = 'var(--accent-forge-subtle)';
             iconColor = 'var(--accent-amber-bright)';
             textColor = '#ffffff';
-            boxShadow = '0 0 16px -2px rgba(255, 107, 26, 0.35)';
+            boxShadow = 'none';
           } else if (state === 'completed') {
             borderColor = st.key === 'completed' ? 'var(--color-success)' : 'rgba(34, 197, 94, 0.35)';
-            bgColor = st.key === 'completed' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(34, 197, 94, 0.05)';
+            bgColor = st.key === 'completed' ? 'var(--color-success-subtle)' : 'rgba(34, 197, 94, 0.05)';
             iconColor = 'var(--color-success-bright)';
             textColor = st.key === 'completed' ? 'var(--color-success-bright)' : '#e2e8f0';
-            if (st.key === 'completed') {
-              boxShadow = '0 0 16px -2px rgba(34, 197, 94, 0.4)';
-            }
+            boxShadow = 'none';
           } else if (state === 'failed') {
             borderColor = 'var(--color-error)';
             bgColor = 'rgba(239, 68, 68, 0.1)';

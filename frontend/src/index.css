@@ -1,22 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* FORGE METAPHOR IDENTITY: Charcoal Iron Base & Molten Amber Accent */
-  --bg-base: #0b0c0e;
-  --bg-surface: #121317;
-  --bg-surface-elevated: #17181e;
-  --bg-surface-glass: rgba(18, 19, 23, 0.88);
-  --bg-card: #131419;
-  --bg-card-hover: #191b22;
-  --bg-card-subtle: #0e0f13;
-  --bg-input: #090a0d;
+  /* SPECFORGE STUDIO TOKENS: Refined Charcoal Iron & Precision Solid Amber (21st.dev / shadcn style) */
+  --bg-base: #090a0d;
+  --bg-surface: #0f1116;
+  --bg-surface-elevated: #151821;
+  --bg-surface-glass: #11131a;
+  --bg-card: #111319;
+  --bg-card-hover: #171a23;
+  --bg-card-subtle: #0d0e13;
+  --bg-input: #0a0b0e;
 
-  /* Industrial Borders */
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-amber: rgba(255, 107, 26, 0.35);
-  --border-hover: rgba(255, 107, 26, 0.5);
-  --border-focus: #ff6b1a;
+  /* Industrial Borders - crisp, unblurred */
+  --border-subtle: #1c1f29;
+  --border-default: #262a37;
+  --border-hover: #373c4e;
+  --border-amber: rgba(234, 88, 12, 0.45);
+  --border-focus: #ea580c;
 
   /* Typography */
   --text-primary: #f8fafc;
@@ -24,35 +24,38 @@
   --text-muted: #64748b;
   --text-dim: #475569;
 
-  /* SINGLE Signature Accent: Molten Amber / Orange (#ff6b1a) */
-  --accent-amber: #ff6b1a;
-  --accent-amber-bright: #ff8533;
-  --accent-amber-light: #ffa366;
-  --accent-amber-glow: rgba(255, 107, 26, 0.35);
-  --accent-amber-subtle: rgba(255, 107, 26, 0.12);
-  --accent-amber-muted: rgba(255, 107, 26, 0.06);
+  /* Solid Forge Amber Accent (#ea580c / #f97316) - NO gradients, NO neon */
+  --accent-forge: #ea580c;
+  --accent-forge-bright: #f97316;
+  --accent-forge-subtle: rgba(234, 88, 12, 0.12);
+  --accent-amber: #ea580c;
+  --accent-amber-bright: #f97316;
+  --accent-amber-light: #fb923c;
+  --accent-amber-subtle: rgba(234, 88, 12, 0.12);
+  --accent-amber-muted: rgba(234, 88, 12, 0.06);
 
-  /* Verification Green */
-  --color-success: #22c55e;
-  --color-success-bright: #4ade80;
-  --color-success-glow: rgba(34, 197, 94, 0.3);
-  --color-warning: #f59e0b;
-  --color-warning-bright: #fbbf24;
-  --color-error: #ef4444;
-  --color-error-bright: #f87171;
+  /* Status Tokens - Solid, High Contrast */
+  --color-success: #16a34a;
+  --color-success-bright: #22c55e;
+  --color-success-subtle: rgba(22, 163, 74, 0.12);
+  --color-warning: #ca8a04;
+  --color-warning-bright: #eab308;
+  --color-warning-subtle: rgba(202, 138, 4, 0.12);
+  --color-error: #dc2626;
+  --color-error-bright: #ef4444;
+  --color-error-subtle: rgba(220, 38, 38, 0.12);
 
-  /* Radii & Shadows */
+  /* Radii */
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-subtle);
-  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
-  --shadow-glow-amber: 0 0 24px -2px var(--accent-amber-glow);
-  --shadow-glow-green: 0 0 24px -2px var(--color-success-glow);
+  /* Elevation Shadows - Crisp, subtle dark depth, NO glowing neon */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.7);
 
   /* Fonts */
   --font-sans: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -81,29 +84,13 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
-  /* Molten ember atmospheric glow at top */
-  background-image:
-    radial-gradient(ellipse 90% 40% at 50% -5%, rgba(255, 107, 26, 0.12), transparent 70%),
-    radial-gradient(circle 600px at 85% 15%, rgba(255, 107, 26, 0.04), transparent 60%);
-  background-attachment: fixed;
-}
-
-/* Blueprint grid texture overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 24px 24px;
-  pointer-events: none;
-  z-index: 0;
 }
 
 #root {
   position: relative;
-  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 code, pre, kbd, .font-mono {
@@ -123,31 +110,29 @@ code, pre, kbd, .font-mono {
   border-radius: var(--radius-sm);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-amber);
+  background: var(--accent-forge);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(255, 107, 26, 0.35);
+  background: rgba(234, 88, 12, 0.35);
   color: #ffffff;
 }
 
-/* Reusable Forge Panels */
+/* Studio Surface Panels - crisp solid, no glowing halo */
 .glass-panel {
   background: var(--bg-surface-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease;
 }
 
 .glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--border-hover);
 }
 
-/* Precision Industrial Forge Badges */
+/* Studio Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -156,7 +141,7 @@ code, pre, kbd, .font-mono {
   font-weight: 600;
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.55rem;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   line-height: 1.2;
@@ -164,43 +149,47 @@ code, pre, kbd, .font-mono {
 }
 
 .badge-amber {
-  background: rgba(255, 107, 26, 0.12);
-  color: var(--accent-amber-bright);
-  border-color: rgba(255, 107, 26, 0.35);
+  background: var(--accent-forge-subtle);
+  color: var(--accent-forge-bright);
+  border-color: var(--border-amber);
 }
 
 .badge-green {
-  background: rgba(34, 197, 94, 0.12);
+  background: var(--color-success-subtle);
   color: var(--color-success-bright);
   border-color: rgba(34, 197, 94, 0.35);
 }
 
 .badge-red {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--color-error-subtle);
   color: var(--color-error-bright);
   border-color: rgba(239, 68, 68, 0.35);
 }
 
 .badge-slate {
-  background: rgba(25, 27, 34, 0.8);
+  background: var(--bg-surface);
   color: var(--text-secondary);
   border-color: var(--border-default);
 }
 
-/* Ember pulse & Forge animations */
-@keyframes emberGlow {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 10px rgba(255, 107, 26, 0.5);
-  }
-  50% {
-    opacity: 0.7;
-    box-shadow: 0 0 4px rgba(255, 107, 26, 0.2);
-  }
+/* Clean status indicator dot (solid, no glowing animation) */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.pulse-ember {
-  animation: emberGlow 2.5s ease-in-out infinite;
+.status-dot-active {
+  background: var(--color-success-bright);
+}
+
+.status-dot-warning {
+  background: var(--accent-forge-bright);
+}
+
+.status-dot-muted {
+  background: var(--text-dim);
 }
 
 @keyframes spin {
@@ -211,45 +200,64 @@ code, pre, kbd, .font-mono {
   animation: spin 1s linear infinite;
 }
 
-/* Terminal CRT Styling for Python CLI preview */
+/* Terminal CRT Window */
 .terminal-window {
-  background: #090a0d;
-  border: 1px solid var(--border-amber);
+  background: #08090c;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   font-family: var(--font-mono);
   color: #e2e8f0;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 107, 26, 0.08);
 }
 
-/* Precision Button with Molten Glow */
+/* Studio Action Button - solid, no gradients, no glowing halo */
 .btn-forge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #ff6b1a 0%, #e0550c 100%);
+  background: var(--accent-forge);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.88rem;
   letter-spacing: 0.01em;
-  padding: 0.75rem 1.6rem;
+  padding: 0.65rem 1.4rem;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--accent-forge);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(255, 107, 26, 0.4), 0 0 0 1px rgba(255, 107, 26, 0.2);
-  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-forge:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff7a2e 0%, #f05e13 100%);
-  box-shadow: 0 6px 24px rgba(255, 107, 26, 0.55), 0 0 12px rgba(255, 107, 26, 0.3);
-  transform: translateY(-1px);
+  background: var(--accent-forge-bright);
+  border-color: var(--accent-forge-bright);
 }
 
 .btn-forge:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  box-shadow: none;
+}
+
+/* Secondary Button */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
 }
 
 /* Reduced Motion */

@@ -65,25 +65,14 @@ export const PlanEditorModal: React.FC<PlanEditorModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(15, 16, 21, 0.98)',
-          border: '1px solid var(--border-amber)',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
           borderRadius: 'var(--radius-md)',
-          boxShadow: '0 24px 64px -12px rgba(0, 0, 0, 0.85), 0 0 24px rgba(255, 107, 26, 0.1)',
+          boxShadow: 'var(--shadow-lg)',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Top amber accent */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #ff6b1a, transparent)',
-          }}
-        />
 
         {/* Modal Header */}
         <div

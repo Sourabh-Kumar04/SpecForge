@@ -7,7 +7,8 @@ import {
   ChevronDown,
   ChevronUp,
   DollarSign,
-  Coins,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface TestReportPanelProps {
@@ -171,7 +172,7 @@ export const TestReportPanel: React.FC<TestReportPanelProps> = ({ testHistory, l
                 }}
               >
                 <span>#{t.iteration}</span>
-                <span>{t.passed ? '✓' : '✗'}</span>
+                {t.passed ? <Check size={11} color="var(--color-success-bright)" /> : <X size={11} color="var(--color-error-bright)" />}
               </button>
             ))}
           </div>

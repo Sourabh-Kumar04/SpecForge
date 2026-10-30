@@ -276,7 +276,12 @@ class AgenticOrchestrator:
                     await self._run_fixer(job_id, spec, plan, test_result.output, current_iter)
                     current_iter += 1
 
-            # 6. AUTO-README & PACKAGING
+            # 6. AUTO-README, COMPONENT INVENTORY & PACKAGING
+            comp_file = self._generate_components_inventory(job_id, spec, plan)
+            storage_service.save_file(job_id, comp_file)
+            await storage_service.emit_event(
+                job_id, "coder", "file_written", f"Generated component inventory: {comp_file.path}"
+            )
             readme_file = self._generate_readme(job_id, spec, plan, all_passed, current_iter)
             storage_service.save_file(job_id, readme_file)
             storage_service.create_zip_export(job_id)
@@ -540,6 +545,137 @@ pytest -v
 *Created with SpecForge • Verified with NVIDIA Nemotron & Nebius AI Cloud*
 """
         return GeneratedFile(path="README.md", content=readme_content, language="markdown")
+
+    def _generate_components_inventory(
+        self,
+        job_id: str,
+        spec: SpecInput,
+        plan: Plan,
+    ) -> GeneratedFile:
+        """Dynamically extracts and tracks every component, module, class, and dependency
+        in the generated project based on real package manifests and code files."""
+        import re
+        job = storage_service.get_job(job_id)
+        files = job.files if job else []
+
+        # 1. Parse dependencies from project files (requirements.txt or package.json)
+        declared_packages: List[Dict[str, str]] = []
+        req_file = next((f for f in files if f.path == "requirements.txt"), None)
+        if req_file:
+            for line in req_file.content.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    parts = re.split(r'(==|>=|<=|~=|>|<)', line, 1)
+                    pkg_name = parts[0].strip()
+                    version_spec = "".join(parts[1:]).strip() if len(parts) > 1 else "latest"
+                    declared_packages.append({
+                        "name": pkg_name,
+                        "version": version_spec,
+                        "source": "requirements.txt"
+                    })
+
+        pkg_json_file = next((f for f in files if f.path == "package.json"), None)
+        if pkg_json_file:
+            try:
+                pkg_data = json.loads(pkg_json_file.content)
+                for k, v in pkg_data.get("dependencies", {}).items():
+                    declared_packages.append({"name": k, "version": str(v), "source": "package.json (runtime)"})
+                for k, v in pkg_data.get("devDependencies", {}).items():
+                    declared_packages.append({"name": k, "version": str(v), "source": "package.json (dev)"})
+            except Exception:
+                pass
+
+        # 2. Extract code components/modules
+        components_found: List[Dict[str, Any]] = []
+        for f in files:
+            if f.path in ("README.md", "COMPONENTS.md", "requirements.txt", "package.json", "tsconfig.json"):
+                continue
+
+            lines = f.content.splitlines()
+            classes = re.findall(r'class\s+([A-Za-z0-9_]+)', f.content)
+            functions = re.findall(r'(?:def|function|const)\s+([A-Za-z0-9_]+)\s*(?:=|:\s*React\.FC|\()', f.content)
+            imports = re.findall(r'(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+)|from\s+[\'"]([^\'"]+)[\'"])', f.content)
+
+            raw_imports = []
+            for m in imports:
+                target = m[0] or m[1] or m[2]
+                if target:
+                    raw_imports.append(target)
+
+            internal_deps = [i for i in raw_imports if i.startswith(".") or (not "." in i and any(i in other.path for other in files))]
+            external_deps = [i for i in raw_imports if i not in internal_deps]
+
+            comp_type = "Test Suite" if f.path.startswith("test") or "test_" in f.path else (
+                "React Component" if f.path.endswith(".tsx") else (
+                    "Service / API Router" if "router" in f.path or "main" in f.path else "Core Module"
+                )
+            )
+
+            components_found.append({
+                "path": f.path,
+                "type": comp_type,
+                "classes": classes,
+                "functions": [fn for fn in functions if not fn.startswith("_")][:5],
+                "internal_deps": sorted(list(set(internal_deps))),
+                "external_deps": sorted(list(set(external_deps))),
+                "lines": len(lines),
+            })
+
+        # Build markdown table
+        md_lines = [
+            f"# Component & Dependency Inventory: {plan.title}",
+            "",
+            f"**Architecture**: `{spec.project_type.value}` | **Generated Files**: `{len(files)}` | **Tracked Components**: `{len(components_found)}`",
+            "",
+            "## 1. Declared Packages & Exact Versions",
+            "Sourced directly from project manifests (`requirements.txt` / `package.json`):",
+            "",
+            "| Package | Version Specification | Manifest Source |",
+            "| :--- | :--- | :--- |"
+        ]
+
+        if declared_packages:
+            for p in declared_packages:
+                md_lines.append(f"| `{p['name']}` | `{p['version']}` | {p['source']} |")
+        else:
+            md_lines.append("| *Standard Library* | `Built-in` | Python 3.12 Runtime |")
+
+        md_lines.extend([
+            "",
+            "## 2. Component & Module Catalog",
+            "Sourced by inspecting actual generated code structure:",
+            "",
+            "| Component / File | Type | Lines | Declared Symbols | Local Dependencies | External Dependencies |",
+            "| :--- | :--- | :---: | :--- | :--- | :--- |"
+        ])
+
+        for c in components_found:
+            symbols = []
+            if c["classes"]:
+                symbols.extend([f"class `{cls}`" for cls in c["classes"]])
+            if c["functions"]:
+                symbols.extend([f"`{fn}()`" for fn in c["functions"]])
+            symbol_str = ", ".join(symbols) if symbols else "Module entry"
+
+            internal_str = ", ".join([f"`{d}`" for d in c["internal_deps"]]) if c["internal_deps"] else "None"
+            external_str = ", ".join([f"`{d}`" for d in c["external_deps"]]) if c["external_deps"] else "None"
+
+            md_lines.append(f"| `{c['path']}` | {c['type']} | {c['lines']} | {symbol_str} | {internal_str} | {external_str} |")
+
+        md_lines.extend([
+            "",
+            "## 3. Component Architecture Summary",
+            f"{plan.architecture_summary}",
+            "",
+            "---",
+            "*Generated autonomously by SpecForge Component Tracker*"
+        ])
+
+        return GeneratedFile(
+            path="COMPONENTS.md",
+            content="\n".join(md_lines),
+            language="markdown"
+        )
 
     # MOCK GENERATORS FOR OFFLINE / ZERO-CREDENTIAL DEMO
     def _generate_mock_plan(self, spec: SpecInput) -> Plan:
@@ -1124,7 +1260,9 @@ class DataProcessor:
                 job_id, "refiner", "test_run", f"All tests passed ({test_result.passed_tests}/{test_result.total_tests} green)!"
             )
 
-        # Repackage zip export
+        # Repackage zip export and refresh component inventory
+        comp_file = self._generate_components_inventory(job_id, job.spec, job.plan)
+        storage_service.save_file(job_id, comp_file)
         storage_service.create_zip_export(job_id)
 
         refine_result = RefineResult(

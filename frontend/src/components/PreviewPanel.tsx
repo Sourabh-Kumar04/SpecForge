@@ -200,14 +200,14 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ job }) => {
                 gap: '0.35rem',
                 padding: '0.35rem 0.85rem',
                 borderRadius: 'var(--radius-sm)',
-                background: 'linear-gradient(135deg, #ff6b1a 0%, #e0550c 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'var(--accent-forge)',
+                border: '1px solid var(--accent-forge)',
                 color: '#ffffff',
                 fontSize: '0.76rem',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(255, 107, 26, 0.35)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
               {isLoading ? (

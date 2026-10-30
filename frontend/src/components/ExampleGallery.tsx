@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExampleSpec, ProjectType } from '../types';
 import { Terminal, Server, Layout, ArrowRight } from 'lucide-react';
+import { Badge } from './ui/Badge';
 
 interface ExampleGalleryProps {
   examples: ExampleSpec[];
@@ -56,15 +57,15 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
               fontSize: '0.72rem',
               fontWeight: 700,
               fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.06em',
-              color: 'var(--accent-amber-bright)',
+              letterSpacing: '0.04em',
+              color: 'var(--accent-forge-bright)',
             }}
           >
             // BLUEPRINT PRESETS
           </span>
         </div>
         <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-          Click blueprint to populate specification
+          Select a template to load specification
         </span>
       </div>
 
@@ -76,8 +77,8 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
         }}
       >
         {examples.map((ex) => {
-          const badge = getArchitectureBadge(ex.project_type);
-          const Icon = badge.icon;
+          const arch = getArchitectureBadge(ex.project_type);
+          const Icon = arch.icon;
 
           return (
             <button
@@ -85,7 +86,6 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
               key={ex.id}
               disabled={disabled}
               onClick={() => onSelect(ex)}
-              className="glass-panel"
               style={{
                 textAlign: 'left',
                 padding: '0.95rem 1.15rem',
@@ -97,20 +97,19 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                 gap: '0.65rem',
                 border: '1px solid var(--border-default)',
                 borderRadius: 'var(--radius-sm)',
-                background: 'rgba(18, 19, 24, 0.75)',
-                transition: 'all 0.18s ease',
+                background: 'var(--bg-card)',
+                transition: 'border-color 0.15s ease, background-color 0.15s ease',
               }}
               onMouseEnter={(e) => {
                 if (!disabled) {
-                  e.currentTarget.style.borderColor = 'var(--accent-amber)';
-                  e.currentTarget.style.boxShadow =
-                    '0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 16px -2px rgba(255, 107, 26, 0.25)';
+                  e.currentTarget.style.borderColor = 'var(--accent-forge)';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!disabled) {
                   e.currentTarget.style.borderColor = 'var(--border-default)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
                 }
               }}
             >
@@ -123,13 +122,10 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                     marginBottom: '0.45rem',
                   }}
                 >
-                  <span
-                    className="badge badge-amber"
-                    style={{ fontSize: '0.66rem' }}
-                  >
+                  <Badge variant="amber" size="sm">
                     <Icon size={11} />
-                    {badge.label}
-                  </span>
+                    {arch.label}
+                  </Badge>
 
                   <ArrowRight size={13} color="var(--text-muted)" />
                 </div>
@@ -138,7 +134,7 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                   style={{
                     fontWeight: 700,
                     fontSize: '0.88rem',
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                     letterSpacing: '-0.01em',
                     marginBottom: '0.25rem',
                   }}
@@ -168,7 +164,7 @@ export const ExampleGallery: React.FC<ExampleGalleryProps> = ({ examples, onSele
                         fontFamily: 'var(--font-mono)',
                         padding: '0.1rem 0.4rem',
                         borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.03)',
+                        background: 'var(--bg-surface)',
                         color: 'var(--text-muted)',
                         border: '1px solid var(--border-subtle)',
                       }}

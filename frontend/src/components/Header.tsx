@@ -1,15 +1,26 @@
 import React from 'react';
-import { Flame, Cpu, Search, Activity, DollarSign, SlidersHorizontal } from 'lucide-react';
+import { Flame, Cpu, Search, Activity, DollarSign, SlidersHorizontal, Terminal, Boxes } from 'lucide-react';
 import { HealthInfo, JobDetail, SettingsInfo } from '../types';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
 
 interface HeaderProps {
   health: HealthInfo | null;
   currentJob?: JobDetail | null;
   onOpenSettings?: () => void;
   settings?: SettingsInfo | null;
+  activeView?: 'studio' | 'components';
+  onSelectView?: (view: 'studio' | 'components') => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettings, settings }) => {
+export const Header: React.FC<HeaderProps> = ({
+  health,
+  currentJob,
+  onOpenSettings,
+  settings,
+  activeView = 'studio',
+  onSelectView,
+}) => {
   const isLive = health ? health.llm_status === 'live' : false;
   const llmStatusLabel = health?.llm_status === 'live'
     ? 'NEBIUS LIVE'
@@ -34,72 +45,125 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
     <header
       style={{
         borderBottom: '1px solid var(--border-default)',
-        background: 'rgba(11, 12, 14, 0.92)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: 'var(--bg-surface)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        padding: '0.75rem 1.75rem',
+        padding: '0.65rem 1.75rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '1rem',
       }}
     >
-      {/* Brand & Forge Metaphor */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-        <div
-          style={{
-            position: 'relative',
-            width: '38px',
-            height: '38px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'linear-gradient(135deg, #ff6b1a 0%, #b84307 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 18px rgba(255, 107, 26, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-            border: '1px solid rgba(255, 107, 26, 0.6)',
-            flexShrink: 0,
-          }}
-        >
-          <Flame size={20} color="#ffffff" />
-        </div>
-
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                letterSpacing: '-0.03em',
-                color: '#ffffff',
-                lineHeight: 1.2,
-              }}
-            >
-              SPEC<span style={{ color: 'var(--accent-amber)' }}>FORGE</span>
-            </span>
-
-            <span
-              className="badge badge-amber"
-              style={{ fontSize: '0.68rem', padding: '0.12rem 0.5rem' }}
-            >
-              CODE REFINERY
-            </span>
-          </div>
-
-          <p
+      {/* Brand & Studio View Switcher */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div
             style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)',
-              marginTop: '0.1rem',
-              fontFamily: 'var(--font-mono)',
+              width: '34px',
+              height: '34px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--accent-forge)',
+              border: '1px solid var(--accent-forge-bright)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            Raw specification in. Test-verified code out.
-          </p>
+            <Flame size={18} color="#ffffff" />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  fontSize: '1.15rem',
+                  fontWeight: 800,
+                  letterSpacing: '-0.03em',
+                  color: '#ffffff',
+                  lineHeight: 1.2,
+                }}
+              >
+                SPEC<span style={{ color: 'var(--accent-forge-bright)' }}>FORGE</span>
+              </span>
+
+              <Badge variant="amber" size="sm">
+                STUDIO
+              </Badge>
+            </div>
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)',
+                marginTop: '0.1rem',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              Specification-to-verified-repository engine
+            </p>
+          </div>
         </div>
+
+        {/* View Switcher: Studio vs Component Inventory */}
+        {onSelectView && (
+          <nav
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'var(--bg-base)',
+              padding: '0.2rem',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-subtle)',
+              gap: '0.2rem',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onSelectView('studio')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.76rem',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                borderRadius: 'var(--radius-sm)',
+                border: activeView === 'studio' ? '1px solid var(--border-amber)' : '1px solid transparent',
+                background: activeView === 'studio' ? 'var(--accent-forge-subtle)' : 'transparent',
+                color: activeView === 'studio' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              <Terminal size={13} />
+              <span>Studio</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSelectView('components')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.76rem',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                borderRadius: 'var(--radius-sm)',
+                border: activeView === 'components' ? '1px solid var(--border-amber)' : '1px solid transparent',
+                background: activeView === 'components' ? 'var(--accent-forge-subtle)' : 'transparent',
+                color: activeView === 'components' ? 'var(--accent-forge-bright)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              <Boxes size={13} />
+              <span>Components</span>
+            </button>
+          </nav>
+        )}
       </div>
 
       {/* Telemetry Status Readouts */}
@@ -107,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.6rem',
+          gap: '0.5rem',
           flexWrap: 'wrap',
           justifyContent: 'flex-end',
         }}
@@ -118,14 +182,14 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
             <div
               className={`badge ${isCapExceeded ? 'badge-red' : 'badge-slate'}`}
               style={{
-                padding: '0.3rem 0.65rem',
-                border: isCapExceeded ? '1px solid #ef4444' : '1px solid rgba(255, 107, 26, 0.3)',
-                color: isCapExceeded ? '#f87171' : 'var(--accent-amber-bright)',
+                padding: '0.28rem 0.6rem',
+                border: isCapExceeded ? '1px solid var(--color-error)' : '1px solid var(--border-default)',
+                color: isCapExceeded ? 'var(--color-error-bright)' : 'var(--text-primary)',
                 fontFamily: 'var(--font-mono)',
               }}
-              title={`Estimated Nebius Token Spend for current job.\nCap: $${spendCap.toFixed(2)} USD (paused gracefully if reached).\nBased on published Token Factory rates.`}
+              title={`Nebius Token Spend: $${spendAmount.toFixed(4)} USD. Spend Cap: $${spendCap.toFixed(2)} USD.`}
             >
-              <DollarSign size={13} color={isCapExceeded ? '#ef4444' : 'var(--accent-amber-bright)'} />
+              <DollarSign size={12} color={isCapExceeded ? 'var(--color-error-bright)' : 'var(--accent-forge-bright)'} />
               <span>
                 SPEND: ${spendAmount.toFixed(4)} / ${spendCap.toFixed(2)}
               </span>
@@ -134,25 +198,19 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
             {/* Live Mode Telemetry */}
             <div
               className={`badge ${isLive ? 'badge-green' : 'badge-amber'}`}
-              style={{ padding: '0.3rem 0.65rem' }}
+              style={{ padding: '0.28rem 0.6rem' }}
               title={
                 health.llm_status === 'live'
-                  ? 'Most recent generation call succeeded through Nebius Token Factory.'
+                  ? 'Active Nebius Token Factory live inference.'
                   : health.llm_status === 'mock_fallback'
-                    ? 'Nebius call failed; generation is using the local mock fallback.'
+                    ? 'Local deterministic mock fallback.'
                     : health.llm_status === 'key_ready'
-                      ? 'Nebius key is configured; no successful inference call has been recorded yet.'
-                      : 'Local deterministic test sandbox.'
+                      ? 'Nebius API Key configured.'
+                      : 'Local sandbox mode.'
               }
             >
-              <div
-                className="pulse-ember"
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: isLive ? 'var(--color-success-bright)' : 'var(--accent-amber-bright)',
-                }}
+              <span
+                className={`status-dot ${isLive ? 'status-dot-active' : 'status-dot-warning'}`}
               />
               <span>{llmStatusLabel}</span>
             </div>
@@ -160,12 +218,12 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
             {/* NVIDIA Models Telemetry */}
             <div
               className="badge badge-slate"
-              style={{ padding: '0.3rem 0.65rem' }}
+              style={{ padding: '0.28rem 0.6rem' }}
               title={`Fast Tier: ${health.models.fast}\nReasoning Tier: ${health.models.reasoning}`}
             >
-              <Cpu size={12} color="var(--accent-amber-bright)" />
-              <span style={{ color: '#cbd5e1' }}>
-                NEMOTRON: {fastModelName} / {reasoningModelName}
+              <Cpu size={12} color="var(--accent-forge-bright)" />
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {fastModelName} / {reasoningModelName}
               </span>
             </div>
 
@@ -173,38 +231,32 @@ export const Header: React.FC<HeaderProps> = ({ health, currentJob, onOpenSettin
             <div
               className={`badge ${health.tavily_enabled ? 'badge-green' : 'badge-slate'}`}
               style={{
-                padding: '0.3rem 0.65rem',
-                border: health.tavily_enabled ? '1px solid rgba(16, 185, 129, 0.4)' : undefined,
+                padding: '0.28rem 0.6rem',
+                border: health.tavily_enabled ? '1px solid rgba(22, 163, 74, 0.4)' : undefined,
               }}
               title={
                 health.tavily_enabled
-                  ? 'Tavily AI Search: Live API key active. Runtime queries retrieve real documentation.'
+                  ? 'Tavily AI Search: Live key active.'
                   : 'Tavily AI Search: Offline curated knowledge base fallback active.'
               }
             >
-              <Search size={12} color={health.tavily_enabled ? 'var(--color-success-bright)' : 'var(--accent-amber-bright)'} />
-              <span style={{ color: health.tavily_enabled ? '#34d399' : '#cbd5e1' }}>
-                TAVILY: {health.tavily_enabled ? 'LIVE KEY' : 'OFFLINE KB'}
+              <Search size={12} color={health.tavily_enabled ? 'var(--color-success-bright)' : 'var(--accent-forge-bright)'} />
+              <span style={{ color: health.tavily_enabled ? 'var(--color-success-bright)' : 'var(--text-secondary)' }}>
+                TAVILY: {health.tavily_enabled ? 'LIVE' : 'OFFLINE'}
               </span>
             </div>
 
             {/* Settings Trigger Button */}
             {onOpenSettings && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onOpenSettings}
-                className="btn btn-secondary"
-                style={{
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
                 title="Configure Nebius & Tavily credentials and spend caps"
               >
                 <SlidersHorizontal size={13} />
                 <span>Settings</span>
-              </button>
+              </Button>
             )}
           </>
         ) : (

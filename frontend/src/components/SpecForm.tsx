@@ -10,6 +10,8 @@ import {
   Flame,
   Sliders,
 } from 'lucide-react';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
 
 interface SpecFormProps {
   prompt: string;
@@ -52,21 +54,21 @@ export const SpecForm: React.FC<SpecFormProps> = ({
     {
       type: 'python_cli',
       title: 'Python CLI Tool',
-      stack: 'Click • Rich • Pytest Harness',
-      desc: 'Modular CLI command tree with formatted terminal output and isolated pytest assertion suite.',
+      stack: 'Click / Rich / Pytest',
+      desc: 'Modular CLI command tree with formatted terminal output and isolated pytest test assertions.',
       icon: Terminal,
     },
     {
       type: 'fastapi_service',
       title: 'FastAPI Microservice',
-      stack: 'FastAPI • Pydantic v2 • ASGI',
+      stack: 'FastAPI / Pydantic v2 / ASGI',
       desc: 'High-throughput async API with typed request/response models and Starlette TestClient coverage.',
       icon: Server,
     },
     {
       type: 'react_component',
       title: 'React 19 Component',
-      stack: 'React 19 • TypeScript • Tailwind',
+      stack: 'React 19 / TypeScript',
       desc: 'Modular interactive UI component with typed props, state transitions, and contract verification.',
       icon: Layout,
     },
@@ -94,26 +96,13 @@ export const SpecForm: React.FC<SpecFormProps> = ({
       onSubmit={handleSubmit}
       className="glass-panel"
       style={{
-        padding: '1.75rem',
+        padding: '1.5rem',
         marginBottom: '1.75rem',
         position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid var(--border-amber)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 107, 26, 0.08)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-default)',
       }}
     >
-      {/* Molten amber hairline top accent */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '2px',
-          background: 'linear-gradient(90deg, transparent, #ff6b1a, transparent)',
-        }}
-      />
-
       {/* Step 1: Target Architecture */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div
@@ -125,25 +114,21 @@ export const SpecForm: React.FC<SpecFormProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span
-              className="badge badge-amber"
-              style={{ fontSize: '0.72rem' }}
-            >
+            <Badge variant="amber" size="sm">
               01 // BLUEPRINT
-            </span>
+            </Badge>
             <label
               style={{
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
               }}
             >
               Target Architecture
             </label>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            Defines runner harness & test suite template
+          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            Defines runner harness and test suite template
           </span>
         </div>
 
@@ -165,20 +150,16 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                 onClick={() => setProjectType(arch.type)}
                 style={{
                   textAlign: 'left',
-                  padding: '1rem 1.15rem',
+                  padding: '1rem',
                   borderRadius: 'var(--radius-sm)',
                   border: isSelected
-                    ? '1.5px solid var(--accent-amber)'
-                    : '1px solid var(--border-default)',
+                    ? '1.5px solid var(--accent-forge)'
+                    : '1px solid var(--border-subtle)',
                   background: isSelected
-                    ? 'rgba(255, 107, 26, 0.08)'
-                    : 'rgba(14, 15, 20, 0.65)',
+                    ? 'var(--accent-forge-subtle)'
+                    : 'var(--bg-surface)',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.18s ease',
-                  position: 'relative',
-                  boxShadow: isSelected
-                    ? '0 0 18px rgba(255, 107, 26, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5)'
-                    : 'none',
+                  transition: 'all 0.15s ease',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.35rem',
@@ -188,27 +169,27 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                     <div
                       style={{
-                        width: '30px',
-                        height: '30px',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: 'var(--radius-sm)',
                         background: isSelected
-                          ? 'rgba(255, 107, 26, 0.2)'
-                          : 'rgba(255, 255, 255, 0.04)',
+                          ? 'var(--accent-forge-subtle)'
+                          : 'var(--bg-surface-elevated)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         border: isSelected
-                          ? '1px solid var(--accent-amber)'
+                          ? '1px solid var(--accent-forge)'
                           : '1px solid var(--border-subtle)',
                       }}
                     >
-                      <Icon size={16} color={isSelected ? 'var(--accent-amber-bright)' : 'var(--text-secondary)'} />
+                      <Icon size={15} color={isSelected ? 'var(--accent-forge-bright)' : 'var(--text-secondary)'} />
                     </div>
                     <div>
                       <div
                         style={{
                           fontWeight: 700,
-                          fontSize: '0.88rem',
+                          fontSize: '0.86rem',
                           color: isSelected ? '#ffffff' : 'var(--text-primary)',
                         }}
                       >
@@ -223,15 +204,15 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                       height: '16px',
                       borderRadius: 'var(--radius-sm)',
                       border: isSelected
-                        ? '1.5px solid var(--accent-amber)'
+                        ? '1.5px solid var(--accent-forge)'
                         : '1px solid var(--border-default)',
-                      background: isSelected ? 'var(--accent-amber)' : 'transparent',
+                      background: isSelected ? 'var(--accent-forge)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {isSelected && <Check size={11} color="#000000" strokeWidth={3.5} />}
+                    {isSelected && <Check size={11} color="#ffffff" strokeWidth={3} />}
                   </div>
                 </div>
 
@@ -239,7 +220,7 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                   style={{
                     fontSize: '0.72rem',
                     fontFamily: 'var(--font-mono)',
-                    color: isSelected ? 'var(--accent-amber-bright)' : 'var(--text-muted)',
+                    color: isSelected ? 'var(--accent-forge-bright)' : 'var(--text-muted)',
                     fontWeight: 600,
                   }}
                 >
@@ -248,7 +229,7 @@ export const SpecForm: React.FC<SpecFormProps> = ({
 
                 <p
                   style={{
-                    fontSize: '0.76rem',
+                    fontSize: '0.75rem',
                     color: 'var(--text-secondary)',
                     lineHeight: 1.4,
                     margin: 0,
@@ -275,48 +256,31 @@ export const SpecForm: React.FC<SpecFormProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span
-              className="badge badge-amber"
-              style={{ fontSize: '0.72rem' }}
-            >
+            <Badge variant="amber" size="sm">
               02 // SPECIFICATION
-            </span>
+            </Badge>
             <label
               style={{
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
               }}
             >
-              Raw Requirements & Interface Contracts
+              Requirements and Interface Contracts
             </label>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             {onLoadSample && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={onLoadSample}
                 disabled={isLoading}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-amber)',
-                  background: 'rgba(255, 107, 26, 0.08)',
-                  color: 'var(--accent-amber-bright)',
-                  fontSize: '0.74rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 600,
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
               >
-                <span>Sample Spec</span>
-              </button>
+                Sample Spec
+              </Button>
             )}
 
             <div
@@ -324,14 +288,14 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.72rem',
                 color: 'var(--text-muted)',
-                background: 'rgba(0, 0, 0, 0.4)',
-                padding: '0.2rem 0.5rem',
+                background: 'var(--bg-surface)',
+                padding: '0.25rem 0.55rem',
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--border-subtle)',
               }}
             >
               <span>{prompt.length} chars</span>
-              <span style={{ margin: '0 0.35rem', opacity: 0.4 }}>•</span>
+              <span style={{ margin: '0 0.35rem', opacity: 0.4 }}>|</span>
               <span>~{estimatedTokens} tokens</span>
             </div>
           </div>
@@ -343,16 +307,6 @@ export const SpecForm: React.FC<SpecFormProps> = ({
             borderRadius: 'var(--radius-sm)',
             background: 'var(--bg-input)',
             border: '1px solid var(--border-default)',
-            boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.7)',
-            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-          }}
-          onFocusCapture={(e) => {
-            e.currentTarget.style.borderColor = 'var(--accent-amber)';
-            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255, 107, 26, 0.2), inset 0 2px 8px rgba(0, 0, 0, 0.7)';
-          }}
-          onBlurCapture={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
-            e.currentTarget.style.boxShadow = 'inset 0 2px 8px rgba(0, 0, 0, 0.7)';
           }}
         >
           <textarea
@@ -366,9 +320,9 @@ export const SpecForm: React.FC<SpecFormProps> = ({
               width: '100%',
               background: 'transparent',
               border: 'none',
-              padding: '0.95rem',
+              padding: '0.85rem',
               color: 'var(--text-primary)',
-              fontSize: '0.9rem',
+              fontSize: '0.88rem',
               lineHeight: 1.6,
               resize: 'vertical',
               fontFamily: 'inherit',
@@ -380,28 +334,28 @@ export const SpecForm: React.FC<SpecFormProps> = ({
           <div
             style={{
               padding: '0.4rem 0.85rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              borderTop: '1px solid var(--border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(255, 255, 255, 0.015)',
+              background: 'var(--bg-surface)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dim)', fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
               <FileCode size={12} />
               <span>Nemotron reasoning decomposes requirements into files and test suites</span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-dim)', fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
-              <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--border-subtle)' }}>⌘</kbd>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)', fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
+              <kbd style={{ background: 'var(--bg-surface-elevated)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--border-subtle)' }}>Ctrl</kbd>
               <span>+</span>
-              <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--border-subtle)' }}>Enter</kbd>
+              <kbd style={{ background: 'var(--bg-surface-elevated)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--border-subtle)' }}>Enter</kbd>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Step 3: Forge Controls & Execution Bar */}
+      {/* Step 3: Studio Controls and Action Bar */}
       <div
         style={{
           display: 'flex',
@@ -410,14 +364,14 @@ export const SpecForm: React.FC<SpecFormProps> = ({
           justifyContent: 'space-between',
           gap: '1rem',
           paddingTop: '1.25rem',
-          borderTop: '1px solid var(--border-default)',
-          background: 'rgba(10, 11, 14, 0.5)',
-          margin: '0 -1.75rem -1.75rem -1.75rem',
-          padding: '1.25rem 1.75rem',
+          borderTop: '1px solid var(--border-subtle)',
+          margin: '0 -1.5rem -1.5rem -1.5rem',
+          padding: '1.25rem 1.5rem',
+          background: 'var(--bg-surface)',
         }}
       >
         {/* Toggles & Parameters */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem' }}>
           {/* Tavily Documentation Grounding Switch */}
           <button
             type="button"
@@ -426,26 +380,26 @@ export const SpecForm: React.FC<SpecFormProps> = ({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.4rem 0.8rem',
+              gap: '0.55rem',
+              padding: '0.35rem 0.75rem',
               borderRadius: 'var(--radius-sm)',
               border: enableResearch
                 ? '1px solid var(--border-amber)'
                 : '1px solid var(--border-default)',
               background: enableResearch
-                ? 'rgba(255, 107, 26, 0.08)'
-                : 'rgba(255, 255, 255, 0.02)',
+                ? 'var(--accent-forge-subtle)'
+                : 'var(--bg-surface-elevated)',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.18s ease',
+              transition: 'all 0.15s ease',
             }}
             title="Grounds generation using Tavily search against latest live documentation"
           >
             <div
               style={{
-                width: '32px',
-                height: '16px',
-                borderRadius: '8px',
-                background: enableResearch ? 'var(--accent-amber)' : '#1e2028',
+                width: '28px',
+                height: '14px',
+                borderRadius: '7px',
+                background: enableResearch ? 'var(--accent-forge)' : '#1e2028',
                 position: 'relative',
                 transition: 'background 0.2s ease',
                 flexShrink: 0,
@@ -453,39 +407,23 @@ export const SpecForm: React.FC<SpecFormProps> = ({
             >
               <div
                 style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '10px',
+                  height: '10px',
                   borderRadius: '50%',
                   background: '#ffffff',
                   position: 'absolute',
                   top: '2px',
-                  left: enableResearch ? '18px' : '2px',
+                  left: enableResearch ? '16px' : '2px',
                   transition: 'left 0.2s ease',
                 }}
               />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Search size={13} color={enableResearch ? 'var(--accent-amber-bright)' : 'var(--text-muted)'} />
+              <Search size={13} color={enableResearch ? 'var(--accent-forge-bright)' : 'var(--text-muted)'} />
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: enableResearch ? '#ffffff' : 'var(--text-secondary)' }}>
-                Tavily Live Grounding
+                Tavily Grounding
               </span>
-              {enableResearch && (
-                <span
-                  style={{
-                    fontSize: '0.62rem',
-                    fontFamily: 'var(--font-mono)',
-                    padding: '1px 5px',
-                    borderRadius: '2px',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    color: '#34d399',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                  }}
-                  title="Tavily AI Search: Grounded web search active for latest library documentation"
-                >
-                  LIVE KEY
-                </span>
-              )}
             </div>
           </button>
 
@@ -497,26 +435,26 @@ export const SpecForm: React.FC<SpecFormProps> = ({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.4rem 0.8rem',
+              gap: '0.55rem',
+              padding: '0.35rem 0.75rem',
               borderRadius: 'var(--radius-sm)',
               border: requirePlanApproval
                 ? '1px solid var(--border-amber)'
                 : '1px solid var(--border-default)',
               background: requirePlanApproval
-                ? 'rgba(255, 107, 26, 0.08)'
-                : 'rgba(255, 255, 255, 0.02)',
+                ? 'var(--accent-forge-subtle)'
+                : 'var(--bg-surface-elevated)',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.18s ease',
+              transition: 'all 0.15s ease',
             }}
             title="Pause pipeline after blueprint creation for review"
           >
             <div
               style={{
-                width: '32px',
-                height: '16px',
-                borderRadius: '8px',
-                background: requirePlanApproval ? 'var(--accent-amber)' : '#1e2028',
+                width: '28px',
+                height: '14px',
+                borderRadius: '7px',
+                background: requirePlanApproval ? 'var(--accent-forge)' : '#1e2028',
                 position: 'relative',
                 transition: 'background 0.2s ease',
                 flexShrink: 0,
@@ -524,13 +462,13 @@ export const SpecForm: React.FC<SpecFormProps> = ({
             >
               <div
                 style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '10px',
+                  height: '10px',
                   borderRadius: '50%',
                   background: '#ffffff',
                   position: 'absolute',
                   top: '2px',
-                  left: requirePlanApproval ? '18px' : '2px',
+                  left: requirePlanApproval ? '16px' : '2px',
                   transition: 'left 0.2s ease',
                 }}
               />
@@ -555,11 +493,11 @@ export const SpecForm: React.FC<SpecFormProps> = ({
               padding: '0.35rem 0.75rem',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border-default)',
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: 'var(--bg-surface-elevated)',
             }}
           >
             <Sliders size={12} color="var(--text-muted)" />
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
               Fixer Loop Limit:
             </span>
             <input
@@ -571,8 +509,8 @@ export const SpecForm: React.FC<SpecFormProps> = ({
               onChange={(e) => setMaxFixIterations(Number(e.target.value))}
               disabled={isLoading}
               style={{
-                width: '65px',
-                accentColor: 'var(--accent-amber)',
+                width: '60px',
+                accentColor: 'var(--accent-forge)',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
               }}
             />
@@ -581,7 +519,7 @@ export const SpecForm: React.FC<SpecFormProps> = ({
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.76rem',
                 fontWeight: 700,
-                color: 'var(--accent-amber-bright)',
+                color: 'var(--accent-forge-bright)',
                 minWidth: '20px',
                 textAlign: 'center',
               }}
@@ -592,33 +530,17 @@ export const SpecForm: React.FC<SpecFormProps> = ({
         </div>
 
         {/* Forge Codebase Submit Button */}
-        <button
+        <Button
           type="submit"
+          variant="default"
+          size="md"
           disabled={!prompt.trim() || isLoading}
-          className="btn-forge"
-          style={{ minWidth: '180px' }}
+          isLoading={isLoading}
+          style={{ minWidth: '170px' }}
         >
-          {isLoading ? (
-            <>
-              <div
-                className="animate-spin"
-                style={{
-                  width: '14px',
-                  height: '14px',
-                  border: '2px solid #ffffff',
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                }}
-              />
-              <span>Forging...</span>
-            </>
-          ) : (
-            <>
-              <Flame size={16} />
-              <span>Forge Codebase</span>
-            </>
-          )}
-        </button>
+          <Flame size={15} />
+          <span>Forge Codebase</span>
+        </Button>
       </div>
     </form>
   );

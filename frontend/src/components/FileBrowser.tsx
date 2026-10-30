@@ -248,13 +248,14 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
                 gap: '0.45rem',
                 padding: '0.4rem 0.95rem',
                 borderRadius: 'var(--radius-sm)',
-                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                background: 'var(--color-success)',
+                border: '1px solid var(--color-success)',
                 color: '#ffffff',
                 fontSize: '0.76rem',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 2px 10px rgba(34, 197, 94, 0.3)',
+                boxShadow: 'var(--shadow-sm)',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -527,8 +528,8 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
                           padding: '0.3rem 0.65rem',
                           borderRadius: 'var(--radius-sm)',
                           background: hasUnsavedChanges
-                            ? 'linear-gradient(135deg, #ff6b1a, #e0550c)'
-                            : 'rgba(255, 255, 255, 0.05)',
+                            ? 'var(--accent-forge)'
+                            : 'var(--bg-surface-elevated)',
                           border: `1px solid ${hasUnsavedChanges ? 'rgba(255, 255, 255, 0.2)' : 'var(--border-subtle)'}`,
                           color: '#ffffff',
                           fontSize: '0.74rem',
