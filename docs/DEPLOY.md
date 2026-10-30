@@ -1,6 +1,5 @@
 # SpecForge Production Deployment Guide 🚀
 **Autonomous Spec-to-Code and Test Verification Engine**  
-*Nebius x NVIDIA Global AI Hackathon (Track: Coding & Agentic Engineering)*
 
 ---
 
@@ -19,7 +18,7 @@ SpecForge runs as a self-contained, unified container architecture:
 Before starting, ensure your deployment target has:
 - **Docker Engine** (24.0+) & **Docker Compose** (v2.20+) OR **Python 3.12** + **Node.js 20+**
 - **Nebius Token Factory API Key** (`https://studio.nebius.ai`)
-- **Tavily AI Search API Key** (`https://tavily.com`) for live doc grounding (bonus track)
+- **Tavily AI Search API Key** (`https://tavily.com`) for live doc grounding
 
 ---
 

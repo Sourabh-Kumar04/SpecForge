@@ -851,7 +851,7 @@ export const App: React.FC = () => {
         }}
       >
         <p style={{ color: 'var(--text-secondary)' }}>
-          SPECFORGE // NEBIUS x NVIDIA GLOBAL AI HACKATHON // TRACK: CODING & AGENTIC ENGINEERING
+          SPECFORGE // AUTONOMOUS SPEC-TO-CODE & TEST VERIFICATION ENGINE
         </p>
         <p style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
           Apache-2.0 • NVIDIA Nemotron • Nebius Token Factory • Tavily Live Grounding

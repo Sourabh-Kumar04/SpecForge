@@ -2,7 +2,6 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius_Token_Factory-NVIDIA_Nemotron-76B900.svg)](https://nebius.com)
-[![Hackathon Track](https://img.shields.io/badge/Hackathon-Coding_&_Agentic_Engineering-purple.svg)](https://nebius.com)
 [![Pytest Suite](https://img.shields.io/badge/Pytest-19_Passed_100%25-brightgreen.svg)]()
 
 ---
@@ -109,9 +108,9 @@ Every NVIDIA/Nemotron model identifier in SpecForge is fully externalized and co
 
 ---
 
-## 🔍 Tavily Search API Grounding ($3,000 Best Use of Tavily Prize Track)
+## 🔍 Tavily Search API Grounding
 
-SpecForge actively targets the **$3,000 "Best Use of Tavily"** prize category by transforming Tavily from a general search engine into an indispensable **documentation grounding layer** for agentic code synthesis:
+SpecForge transforms Tavily from a general search engine into an indispensable **documentation grounding layer** for agentic code synthesis:
 
 ### Why Tavily Grounding is Essential
 Standard LLMs hallucinate outdated APIs or deprecated signatures (e.g., deprecated FastAPI event handlers instead of `@asynccontextmanager lifespan`, Pydantic v1 `.dict()` instead of v2 `.model_dump()`, or deprecated Click callback patterns). SpecForge's Researcher Agent solves this by querying the **Tavily Search API** before any code is generated:
@@ -120,7 +119,7 @@ Standard LLMs hallucinate outdated APIs or deprecated signatures (e.g., deprecat
 3. **Coder Prompt Conditioning**: The retrieved documentation is injected directly into the Nemotron Coder's context prompt, ensuring newly generated code adheres to latest upstream production specifications.
 
 ### Explicit On/Off Toggle & Live UI Visibility
-- **Frontend Spec Form Toggle**: SpecForge provides an explicit, prominent ON/OFF toggle in the web UI (`Tavily Research Grounding: ON / OFF`) featuring an interactive switch and a `$3k Prize Track` badge. Users can toggle external web research on or off at will.
+- **Frontend Spec Form Toggle**: SpecForge provides an explicit, prominent ON/OFF toggle in the web UI (`Tavily Grounding`) featuring an interactive switch. Users can toggle external web research on or off at will.
 - **Live Pipeline Step**: When enabled, the live agent timeline highlights a dedicated active step (`2. Tavily Docs Grounding`) with real-time SSE updates. When disabled, the timeline clearly indicates the step was skipped per user selection.
 - **Dedicated Grounded Research Panel**: When research runs, a dedicated research panel in the web interface displays the retrieved documentation sources, direct official doc hyperlinks, summaries, and key API chips.
 - **Zero-Credential Evaluation Fallback**: If `TAVILY_API_KEY` is not configured, SpecForge seamlessly falls back to a high-fidelity local grounded knowledge base covering Click 8.1+, FastAPI 0.110+, Pydantic v2, Pytest 8.0+, and React 19, allowing judges and developers to test the full pipeline offline with 0 credentials.

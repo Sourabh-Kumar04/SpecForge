@@ -179,7 +179,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Tavily Grounding ($3k Prize)
+              Tavily Grounding
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem' }}>
               <span
