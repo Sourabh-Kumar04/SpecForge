@@ -37,7 +37,7 @@ SpecForge transforms a plain-English app description into a **complete, test-ver
                              ▼
   ┌────────────────────────────────────────────────────────┐
   │                   1. Planner Agent                     │
-  │     (NVIDIA Nemotron 70B / 3 Ultra Reasoning Tier)     │
+  │        (NVIDIA Nemotron 3 Ultra Reasoning Tier)        │
   │  Decomposes spec into modular architecture & test plan │
   └──────────────────────────┬─────────────────────────────┘
                              │
@@ -85,26 +85,31 @@ SpecForge transforms a plain-English app description into a **complete, test-ver
 
 ## 🧠 NVIDIA Nemotron & Nebius Token Factory Integration
 
-SpecForge is engineered from the ground up to exploit open-source **NVIDIA Nemotron** models running on **Nebius Token Factory / Nebius AI Cloud**:
+SpecForge is engineered from the ground up to leverage open-source **NVIDIA Nemotron** models served on **Nebius Token Factory / Nebius AI Cloud**:
 
-### 1. Dual-Tier Model Strategy
-- **Reasoning Tier (`NEBIUS_MODEL_REASONING`)**: Default `nvidia/Llama-3.1-Nemotron-70B-Instruct` or `nvidia/nemotron-3-ultra`. Utilized for high-order architectural planning, decomposing ambiguous user requirements, and analyzing failure tracebacks in the Fixer loop.
-- **Fast Tier (`NEBIUS_MODEL_FAST`)**: Default `nvidia/nemotron-mini-4b-instruct`. Utilized for fast file templating, doc query extraction, and rapid test suite generation.
+### 1. Dual-Tier NVIDIA Nemotron Model Strategy
+- **Reasoning Tier (`NEBIUS_MODEL_REASONING`)**: Default `nvidia/Nemotron-3-Ultra-550b-a55b`. Utilized for high-order architectural planning, decomposing complex specifications into modular architectures, and analyzing test failure tracebacks during the autonomous Fixer loop.
+- **Fast Tier (`NEBIUS_MODEL_FAST`)**: Default `nvidia/nemotron-3-super-120b-a12b`. Utilized for high-speed file generation, templating, and test suite synthesis.
 
-### 2. Handling Nemotron Gotchas
+### 2. How Nebius Token Factory Accelerated the Workflow
+- **OpenAI-Compatible Endpoint**: Nebius Token Factory provides a direct OpenAI-compatible endpoint (`https://api.studio.nebius.ai/v1`), enabling effortless drop-in client integration without bespoke SDK wrappers or custom self-hosted inference clusters.
+- **High-Throughput Agentic Loops**: Serving NVIDIA Nemotron models through Token Factory delivers fast token generation that accelerates the multi-turn agentic pipeline (Planner → Researcher → Coder → Tester → Fixer) and interactive sandbox verification runs.
+- **Tavily Grounding Synergy**: Paired with Tavily real-time documentation search, the models receive verified upstream documentation and modern API signatures, allowing the Nemotron coder and reasoning tiers to produce working, verified code without hallucinated APIs.
+
+### 3. Handling Nemotron Gotchas
 Calling NVIDIA Nemotron models through Nebius Token Factory involves critical implementation details that SpecForge solves natively:
 - **Reasoning Content Fallback**: Nemotron models are reasoning models where the answer can be placed in `message.reasoning_content` while `choices[0].message.content` may be empty or unpopulated. SpecForge's [`LLMClient`](backend/services/llm_client.py) inspects `content` and automatically falls back to `reasoning_content`.
 - **JSON Structuring Without Tool Calling**: Open-source reasoning models on Token Factory do not support OpenAI function/tool calling schemas. SpecForge enforces strict JSON output schemas via engineered prompts and extracts valid JSON structures robustly across markdown fences and raw text.
 - **Zero-Credential Mock Mode**: When `NEBIUS_API_KEY` is omitted or `MOCK_LLM=true` is set, SpecForge executes in high-fidelity mock mode so all unit tests, sandbox runs, and frontend demonstrations run without external API credentials.
 
-### 3. Model ID Configuration & Nebius Catalog Confirmation
+### 4. Model ID Configuration & Nebius Catalog Confirmation
 Every NVIDIA/Nemotron model identifier in SpecForge is fully externalized and configurable via environment variables:
-- `NEBIUS_MODEL_FAST`: Identifier for the fast completion tier (default: `nvidia/nemotron-mini-4b-instruct`).
-- `NEBIUS_MODEL_REASONING`: Identifier for the deep reasoning tier (default: `nvidia/Llama-3.1-Nemotron-70B-Instruct`).
+- `NEBIUS_MODEL_FAST`: Identifier for the fast completion tier (default: `nvidia/nemotron-3-super-120b-a12b`).
+- `NEBIUS_MODEL_REASONING`: Identifier for the deep reasoning tier (default: `nvidia/Nemotron-3-Ultra-550b-a55b`).
 
 > [!IMPORTANT]
 > **Confirm Model IDs in Nebius Catalog Before Submission**:
-> Nebius Token Factory updates its model catalog regularly, and exact model identifier strings (e.g. `nvidia/nemotron-mini-4b-instruct`, `nvidia/Llama-3.1-Nemotron-70B-Instruct`, or new Nemotron variants) can evolve between release cycles. Before final submission or running against live cloud inference, verify the exact active model strings in the [Nebius Token Factory Playground / Model Catalog](https://api.studio.nebius.ai) and set `NEBIUS_MODEL_FAST` and `NEBIUS_MODEL_REASONING` in your `.env` file accordingly. No code modifications are needed because zero model IDs are hardcoded in source.
+> Nebius Token Factory updates its model catalog regularly, and exact model identifier strings (e.g. `nvidia/nemotron-3-super-120b-a12b`, `nvidia/Nemotron-3-Ultra-550b-a55b`, or new Nemotron variants) can evolve between release cycles. Before final submission or running against live cloud inference, verify the exact active model strings in the [Nebius Token Factory Playground / Model Catalog](https://api.studio.nebius.ai) and set `NEBIUS_MODEL_FAST` and `NEBIUS_MODEL_REASONING` in your `.env` file accordingly. No code modifications are needed because zero model IDs are hardcoded in source.
 
 ---
 
@@ -323,7 +328,7 @@ python3 -m pytest -v backend/tests
 
 | Rubric Criteria (Weight) | SpecForge Implementation |
 | :--- | :--- |
-| **Technological Implementation (25%)** | Native OpenAI-compatible client targeting Nebius Token Factory / AI Cloud. Dual-tier Nemotron model orchestration (`nvidia/nemotron-mini-4b-instruct` and `nvidia/Llama-3.1-Nemotron-70B-Instruct`). Addresses all Nemotron gotchas: `reasoning_content` extraction, JSON-only prompting, and catalog string configuration. Includes full Docker container sandbox with isolated subprocess fallback and timeout enforcement. |
+| **Technological Implementation (25%)** | Native OpenAI-compatible client targeting Nebius Token Factory / AI Cloud. Dual-tier Nemotron model orchestration (`nvidia/nemotron-3-super-120b-a12b` and `nvidia/Nemotron-3-Ultra-550b-a55b`). Addresses all Nemotron gotchas: `reasoning_content` extraction, JSON-only prompting, and catalog string configuration. Includes full Docker container sandbox with isolated subprocess fallback and timeout enforcement. |
 | **Design (25%)** | Complete, coherent product experience. Polished React 19 web application featuring live Server-Sent Events (SSE) agent timeline, real-time reasoning thoughts bubble, multi-file code browser with Prism syntax highlighting, interactive plan editor modal, test metrics dashboard with green verification badge, and one-click ZIP download. |
 | **Potential Impact (25%)** | Directly solves developer frustration with broken, outdated LLM code for indie hackers, students, and hackathon competitors. Guarantees that code downloaded is grounded in real API documentation and verified by green test executions. |
 | **Quality of the Idea (25%)** | "Verified, research-grounded generation" — every generated repository is grounded via Tavily web search for current library documentation and verified by green sandbox test runs with an autonomous Fixer feedback loop. |
