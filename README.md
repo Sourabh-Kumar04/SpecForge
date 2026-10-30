@@ -5,10 +5,6 @@
 [![Hackathon Track](https://img.shields.io/badge/Hackathon-Coding_&_Agentic_Engineering-purple.svg)](https://nebius.com)
 [![Pytest Suite](https://img.shields.io/badge/Pytest-19_Passed_100%25-brightgreen.svg)]()
 
-> **Verified, Research-Grounded Code Synthesis**  
-> *Nebius x NVIDIA Global AI Hackathon (Deadline Oct 30, 2026)*  
-> **Track:** Coding and Agentic Engineering
-
 ---
 
 ## 🎯 The Problem & Our Mission
